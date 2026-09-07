@@ -73,7 +73,8 @@ in the page that composes both modules.
 - **Do not edit the CSS to make a component fit.** Change the component's markup
   to use the existing class names.
 - New UI should compose `@/shared/components` — those carry the design system's
-  class names. If you need a new primitive, add it there rather than styling
+  class names. `docs/DESIGN_SYSTEM_GUIDE.md` documents every class, rule and
+  token, and ends with an adoption checklist worth running before you ship a screen. If you need a new primitive, add it there rather than styling
   inline in a feature module.
 - If you genuinely must change a design token, change it in the design file too
   and record it in `docs/DESIGN_FIDELITY.md`.

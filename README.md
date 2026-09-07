@@ -102,6 +102,7 @@ These are load-bearing. They are implemented in types, not just in prose:
 | [`docs/MODULE_MAP.md`](docs/MODULE_MAP.md) | Every module, what it owns, what it depends on |
 | [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | What was built, in what order, and what is next |
 | [`docs/REQUIREMENTS_CHECKLIST.md`](docs/REQUIREMENTS_CHECKLIST.md) | Requirement-by-requirement status |
+| [`docs/DESIGN_SYSTEM_GUIDE.md`](docs/DESIGN_SYSTEM_GUIDE.md) | **Portable design system** — tokens, components, rules and the full stylesheet. Self-contained; reusable in other projects. |
 | [`docs/DESIGN_FIDELITY.md`](docs/DESIGN_FIDELITY.md) | Design verification and every divergence, with arithmetic |
 | [`PROJECT_MEMORY.md`](PROJECT_MEMORY.md) | Decisions, assumptions, open questions, next steps |
 | `src/modules/*/README.md` | Per-module responsibility and rules |
