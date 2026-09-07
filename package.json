@@ -1,0 +1,30 @@
+{
+  "name": "holdfast-wealth-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Holdfast — wealth & property operations platform",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "eslint": "^9.30.0",
+    "eslint-config-next": "^15.5.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.7"
+  }
+}

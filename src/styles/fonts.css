@@ -1,0 +1,5 @@
+/* Binds the design's `--font` token to the locally-hosted IBM Plex Sans that
+   next/font injects, keeping the prototype's fallback stack intact. */
+:root {
+  --font: var(--font-ibm-plex-sans), "IBM Plex Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

@@ -1,0 +1,56 @@
+/* Responsive rules — verbatim from the design prototype (lines 327-381). */
+/* ---------- Responsive ---------- */
+@media (max-width:1320px){
+  .attn{flex-wrap:wrap}
+  .attn-item{flex:1 1 45%;border-bottom:1px solid var(--line-2)}
+  .attn-item:nth-child(2n){border-right:0}
+  .attn-item:nth-last-child(-n+2){border-bottom:0}
+}
+@media (max-width:1180px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .g2{grid-template-columns:1fr}
+  .g3{grid-template-columns:repeat(2,1fr)}
+  .g4{grid-template-columns:repeat(2,1fr)}
+  .search{width:200px}
+  .frames{grid-template-columns:1fr}
+}
+@media (max-width:840px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;width:min(300px,86vw);transform:translateX(-102%);transition:transform .22s ease}
+  .sidebar.open{transform:none}
+  .scrim.show{display:block}
+  .menu-btn{display:grid}
+  .topbar{padding:0 14px;gap:8px}
+  .search{display:none}
+  .asof{display:none}
+  .page-title{font-size:16px}
+  .content{padding:14px 14px calc(var(--tabbar) + 24px)}
+  .kpis{grid-template-columns:repeat(2,1fr);gap:10px}
+  .kpi{padding:13px 14px 12px}
+  .kpi-value{font-size:22px}
+  .kpi.wide{grid-column:1/-1}
+  .attn{flex-direction:column}
+  .attn-item{border-right:0;border-bottom:1px solid var(--line-2)}
+  .attn-item:last-child{border-bottom:0}
+  .g3,.g4{grid-template-columns:1fr}
+  .fgrid{grid-template-columns:1fr}
+  .card-h,.card-b{padding-left:14px;padding-right:14px}
+  th,td{padding-left:14px;padding-right:14px}
+  .list li{padding-left:14px;padding-right:14px}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;height:var(--tabbar);background:var(--surface);border-top:1px solid var(--line);z-index:30;padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10.5px;color:var(--muted)}
+  .tabbar button[aria-current="page"]{color:var(--text);font-weight:500}
+  .tabbar button[aria-current="page"] svg{color:var(--gold-deep)}
+  .tabbar svg.i{width:22px;height:22px}
+  .hide-m{display:none !important}
+  /* Tables turn into cards on small screens */
+  table.stack-m thead{display:none}
+  table.stack-m,table.stack-m tbody,table.stack-m tr,table.stack-m td{display:block;width:100%}
+  table.stack-m tr{padding:10px 14px;border-bottom:1px solid var(--line-2)}
+  table.stack-m td{padding:3px 0;border:0;display:flex;justify-content:space-between;gap:12px;text-align:left}
+  table.stack-m td.r{text-align:right}
+  table.stack-m td::before{content:attr(data-l);color:var(--muted);font-size:12px;flex:none}
+  table.stack-m td.lead{display:block;padding-bottom:6px}
+  table.stack-m td.lead::before{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important}}

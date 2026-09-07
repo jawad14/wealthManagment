@@ -1,0 +1,10 @@
+/* Global stylesheet entry point.
+   The design prototype's single <style> block is split into ordered layers below.
+   Order matters: tokens -> base -> shell -> components -> responsive,
+   exactly as the cascade appeared in design/wealth-platform-design.html. */
+@import './tokens.css';
+@import './fonts.css';
+@import './base.css';
+@import './shell.css';
+@import './components.css';
+@import './responsive.css';
