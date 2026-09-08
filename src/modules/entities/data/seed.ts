@@ -11,6 +11,7 @@ export const ENTITY_IDS = {
   esteem: asId<'Entity'>('ent-esteem'),
   familyTrust: asId<'Entity'>('ent-family-trust'),
   smsf: asId<'Entity'>('ent-smsf'),
+  hassan: asId<'Entity'>('ent-hassan'),
 } satisfies Record<string, EntityId>;
 
 /** Property ids are declared here too so the ownership graph can reference them. */
@@ -62,6 +63,17 @@ export function seedEntities(): readonly Entity[] {
       consolidationNote: 'Consolidated look-through',
       valueNote: 'Net of debt',
       establishedYear: 2019,
+    },
+    {
+      id: ENTITY_IDS.hassan,
+      name: 'Hassan Siddique',
+      kind: 'individual',
+      descriptor: 'Individual',
+      monogram: 'HS',
+      consolidation: 'look-through',
+      // Holds no asset interests yet — a family contributor with assigned tasks
+      // and a budget, which is why the register lists him with no figure.
+      valueNote: 'No recorded interests',
     },
     {
       id: ENTITY_IDS.smsf,
@@ -178,6 +190,15 @@ export function seedRelationships(): readonly Relationship[] {
     {
       id: 'rel-mahvish-beneficiary-trust',
       subjectEntityId: ENTITY_IDS.mahvish,
+      kind: 'beneficiary-of',
+      target: { type: 'entity', entityId: ENTITY_IDS.familyTrust },
+      from: '2019-06-01',
+      to: null,
+      label: 'Beneficiary · Family Trust',
+    },
+    {
+      id: 'rel-hassan-beneficiary-trust',
+      subjectEntityId: ENTITY_IDS.hassan,
       kind: 'beneficiary-of',
       target: { type: 'entity', entityId: ENTITY_IDS.familyTrust },
       from: '2019-06-01',

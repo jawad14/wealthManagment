@@ -82,8 +82,38 @@ export function seedProperties(): readonly Property[] {
   ];
 }
 
+/**
+ * Earlier valuations.
+ *
+ * `latestValuation` selects the most recent on or before the as-of date, so
+ * adding history changes no current figure — it gives the valuation trail
+ * something to show and makes the staleness rule visible over time.
+ */
+function valuationHistory(): Valuation[] {
+  const entries: readonly (readonly [string, keyof typeof PROPERTY_IDS, number, Valuation['basis'], string, Valuation['confidence']])[] = [
+    ['val-compton-2024-07', 'comptonRd', 1_040_000, 'bank', '2024-07-11', 'high'],
+    ['val-compton-2022-09', 'comptonRd', 905_000, 'agent-appraisal', '2022-09-14', 'medium'],
+    ['val-compton-2021-03', 'comptonRd', 812_000, 'purchase-price', '2021-03-12', 'high'],
+    ['val-benton-2023-08', 'bentonSt', 870_000, 'bank', '2023-08-22', 'high'],
+    ['val-benton-2022-07', 'bentonSt', 795_000, 'purchase-price', '2022-07-19', 'high'],
+    ['val-watson-2024-02', 'watsonRd', 968_000, 'bank', '2024-02-19', 'high'],
+    ['val-watson-2019-09', 'watsonRd', 640_000, 'purchase-price', '2019-09-30', 'high'],
+  ];
+
+  return entries.map(([id, property, amount, basis, valuedOn, confidence]) => ({
+    id: asId<'Valuation'>(id),
+    propertyId: PROPERTY_IDS[property],
+    amount: fromMajorUnits(amount),
+    basis,
+    valuedOn,
+    confidence,
+    datePrecision: 'month' as const,
+  }));
+}
+
 export function seedValuations(): readonly Valuation[] {
   return [
+    ...valuationHistory(),
     {
       id: asId<'Valuation'>('val-compton-2026-08'),
       propertyId: PROPERTY_IDS.comptonRd,

@@ -17,6 +17,13 @@ export const TENANT_IDS = {
   williams: asId<'Tenant'>('ten-williams'),
   rahman: asId<'Tenant'>('ten-rahman'),
   patel: asId<'Tenant'>('ten-patel'),
+  // Former tenants, retained because their leases and receipts stay on record.
+  brooks: asId<'Tenant'>('ten-brooks'),
+  ali: asId<'Tenant'>('ten-ali'),
+  tran: asId<'Tenant'>('ten-tran'),
+  mensah: asId<'Tenant'>('ten-mensah'),
+  kaur: asId<'Tenant'>('ten-kaur'),
+  doyle: asId<'Tenant'>('ten-doyle'),
 };
 
 export const LEASE_IDS = {
@@ -26,6 +33,15 @@ export const LEASE_IDS = {
   williamsR4: asId<'Lease'>('lease-166c-r4'),
   rahmanR5: asId<'Lease'>('lease-166c-r5'),
   patelBenton: asId<'Lease'>('lease-20b-wh'),
+
+  // Ended tenancies. Kept so paid history and the reasons for a vacancy stay
+  // inspectable — an ended lease is never deleted.
+  brooksR1: asId<'Lease'>('lease-166c-r1-prior'),
+  aliR2: asId<'Lease'>('lease-166c-r2-prior'),
+  tranR3: asId<'Lease'>('lease-166c-r3-prior'),
+  mensahR6: asId<'Lease'>('lease-166c-r6-prior'),
+  kaurMians: asId<'Lease'>('lease-mians-prior'),
+  doyleBenton: asId<'Lease'>('lease-20b-prior'),
 };
 
 export function seedTenants(): readonly Tenant[] {
@@ -36,6 +52,12 @@ export function seedTenants(): readonly Tenant[] {
     { id: TENANT_IDS.williams, name: 'S. Williams' },
     { id: TENANT_IDS.rahman, name: 'D. Rahman' },
     { id: TENANT_IDS.patel, name: 'R. Patel' },
+    { id: TENANT_IDS.brooks, name: 'T. Brooks' },
+    { id: TENANT_IDS.ali, name: 'N. Ali' },
+    { id: TENANT_IDS.tran, name: 'K. Tran' },
+    { id: TENANT_IDS.mensah, name: 'E. Mensah' },
+    { id: TENANT_IDS.kaur, name: 'P. Kaur' },
+    { id: TENANT_IDS.doyle, name: 'C. Doyle' },
   ];
 }
 
@@ -123,6 +145,94 @@ export function seedLeases(): readonly Lease[] {
       frequency: 'fortnightly',
       chargeAnchorOn: '2025-11-04',
       remindersEnabled: true,
+      disputed: false,
+    },
+
+    // ---- Ended tenancies ----
+    {
+      id: LEASE_IDS.brooksR1,
+      tenantId: TENANT_IDS.brooks,
+      propertyId: PROPERTY_IDS.comptonRd,
+      componentId: COMPONENT_IDS.comptonRoom1,
+      reference: '166C-R1-P',
+      startsOn: '2025-02-01',
+      endsOn: '2026-01-31',
+      rent: fromMajorUnits(330),
+      frequency: 'weekly',
+      chargeAnchorOn: '2025-02-03',
+      remindersEnabled: false,
+      disputed: false,
+    },
+    {
+      id: LEASE_IDS.aliR2,
+      tenantId: TENANT_IDS.ali,
+      propertyId: PROPERTY_IDS.comptonRd,
+      componentId: COMPONENT_IDS.comptonRoom2,
+      reference: '166C-R2-P',
+      startsOn: '2025-04-15',
+      endsOn: '2026-04-14',
+      rent: fromMajorUnits(310),
+      frequency: 'weekly',
+      chargeAnchorOn: '2025-04-16',
+      remindersEnabled: false,
+      disputed: false,
+    },
+    {
+      id: LEASE_IDS.tranR3,
+      tenantId: TENANT_IDS.tran,
+      propertyId: PROPERTY_IDS.comptonRd,
+      componentId: COMPONENT_IDS.comptonRoom3,
+      reference: '166C-R3-P',
+      startsOn: '2025-06-01',
+      endsOn: '2026-05-31',
+      rent: fromMajorUnits(460),
+      frequency: 'fortnightly',
+      chargeAnchorOn: '2025-06-03',
+      remindersEnabled: false,
+      disputed: false,
+    },
+    {
+      // Explains why Room 6 shows "vacant since 24 Aug".
+      id: LEASE_IDS.mensahR6,
+      tenantId: TENANT_IDS.mensah,
+      propertyId: PROPERTY_IDS.comptonRd,
+      componentId: COMPONENT_IDS.comptonRoom6,
+      reference: '166C-R6-P',
+      startsOn: '2025-08-25',
+      endsOn: '2026-08-24',
+      rent: fromMajorUnits(345),
+      frequency: 'weekly',
+      chargeAnchorOn: '2025-08-25',
+      remindersEnabled: false,
+      disputed: false,
+    },
+    {
+      // Explains why Mians Rd shows "Lease ended 20 Aug".
+      id: LEASE_IDS.kaurMians,
+      tenantId: TENANT_IDS.kaur,
+      propertyId: PROPERTY_IDS.miansRd,
+      componentId: COMPONENT_IDS.miansWhole,
+      reference: 'MIANS-WH-P',
+      startsOn: '2024-08-21',
+      endsOn: '2026-08-20',
+      rent: fromMajorUnits(560),
+      frequency: 'weekly',
+      chargeAnchorOn: '2024-08-21',
+      remindersEnabled: false,
+      disputed: false,
+    },
+    {
+      id: LEASE_IDS.doyleBenton,
+      tenantId: TENANT_IDS.doyle,
+      propertyId: PROPERTY_IDS.bentonSt,
+      componentId: COMPONENT_IDS.bentonWhole,
+      reference: '20B-WH-P',
+      startsOn: '2024-11-01',
+      endsOn: '2025-10-31',
+      rent: fromMajorUnits(1_290),
+      frequency: 'fortnightly',
+      chargeAnchorOn: '2024-11-05',
+      remindersEnabled: false,
       disputed: false,
     },
   ];

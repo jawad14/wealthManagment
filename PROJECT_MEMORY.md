@@ -3,7 +3,7 @@
 Running record for future sessions. Read this first; it should let you resume
 without re-deriving anything.
 
-**Last updated:** 2026-09-07 (session 2 — requirements document received)
+**Last updated:** 2026-09-08 (session 3 — demonstration dataset)
 **Build status:** 110 tests ✅ · typecheck ✅ · lint ✅ · build ✅ · 21 routes live
 
 ---
@@ -88,17 +88,39 @@ screen, the app computes and the divergence is documented with arithmetic in
 the prototype counts a receivable as debt (contra FR-11) and reports a repayment
 split that its own IO facility makes impossible.
 
+## 3.10 The seed is a demonstration dataset, deliberately shaped
+
+Every section now holds enough data to demonstrate its filters and states: 23
+obligations, 142 documents, 49 expenses, 11 shared bills, 6 ended leases, 28
+audit events, 12 valuations, 12 months of posted cash flow.
+
+**Properties, loans and arrears-bearing leases were left untouched on purpose.**
+They drive the figures that match the prototype exactly, and changing them would
+silently break that correspondence. If you add to them, expect
+`tests/uat-05-dashboard-fixtures.test.ts` to fail — its fixtures are hand-derived,
+so a failure there means *update the fixture consciously*, not patch the test.
+
+Two mistakes made while building this dataset, both caught by tests, both worth
+avoiding again:
+
+- A "historical" Mians Rd valuation was dated **after** the 2023 purchase price it
+  was meant to precede, so `latestValuation` silently picked it up and assets fell
+  by $25,000. Valuation history must be dated before the current record.
+- Electricity bills were pointed at the 60/40 **water** agreement, whose effective
+  period starts 1 July, so every earlier bill showed as blocked. Common-area
+  electricity now has its own standing agreement.
+
 ## 4. Assumptions still needing confirmation
 
 | # | Assumption | Impact if wrong |
 | --- | --- | --- |
 | 1 | Only property and receivables are in scope as assets | Net worth is $2,163,300, not the prototype's $4,821,300 |
 | 2 | Portfolio LVR uses securing collateral; stale valuations are ineligible | The tile reads "Unavailable" instead of 32.6% |
-| 3 | "Due soon" horizon is 14 days for both KPI and list | 2 rows shown instead of the prototype's 4 |
+| 3 | "Due soon" horizon is 14 days for both KPI and list | Now matches the prototype exactly: 7 items · $9,320 |
 | 4 | Facility debt splits evenly across named borrowers | Per-entity positions change |
 | 5 | Pool allocation stays unapproved, so no pooled per-property LVR is published | CBA-secured properties show a chip instead of a ratio |
 | 6 | Repayment principal/interest come from statements, not derivation | Split reads $854/$11,086, not the prototype's $9,140/$2,800 |
-| 7 | Counts derive from records rather than the prototype's labels | "All 7" not "All 23", etc. |
+| 7 | Counts derive from records rather than the prototype's labels | Now aligned: obligations 23, documents 142, entities 6 |
 | 8 | A financial position reports the latest *posted* month, not the current one | August figures shown on a 6 Sep as-of date |
 
 ## 5. Known gaps
@@ -158,4 +180,5 @@ raise a toast.
 | Date | Change |
 | --- | --- |
 | 2026-09-07 | Session 1: built from the design alone. 9 modules, 10 screens, 16 API routes, full documentation. Design verified byte-identical. |
+| 2026-09-08 | Session 3: filled the seed out into a demonstration dataset — every section and filter now has content. Closed five documented divergences (obligations 23, documents 142, entities 6, unlinked 2, upcoming 7 items/$9,320). Headline figures unchanged and still fixture-tested. |
 | 2026-09-07 | Session 2: requirements document received. Added `shared-bills` (FR-07) and `expenses` (FR-04); BR-06 money/date discipline; BR-03 separated reporting; BR-05 credits and reversals; FR-06 duplicate-import protection; FR-08 idempotent dispatch; FR-09 drill-down and permission-parity exports; NFR-01 server-side enforcement. 110 tests including UAT-01…07. Fixed a cash-flow chart anchoring bug the tests exposed. |

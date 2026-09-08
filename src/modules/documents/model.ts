@@ -7,7 +7,7 @@
  *  2. **Versions are additive.** A replacement is a new `DocumentVersion`, so an
  *     amended lease never overwrites the original that was signed.
  */
-import type { DocumentId, IsoDate, IsoDateTime, PropertyId, UserId } from '@/shared/types/common';
+import type { DocumentId, EntityId, IsoDate, IsoDateTime, PropertyId, UserId } from '@/shared/types/common';
 
 export type DocumentType =
   | 'lease'
@@ -33,6 +33,7 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
 /** What a document can be attached to. A document may have several links. */
 export type DocumentLink =
   | { readonly type: 'property'; readonly propertyId: PropertyId; readonly label: string }
+  | { readonly type: 'entity'; readonly entityId: EntityId; readonly label: string }
   | { readonly type: 'obligation'; readonly obligationId: string; readonly label: string }
   | { readonly type: 'lease'; readonly leaseId: string; readonly label: string }
   | { readonly type: 'loan'; readonly loanId: string; readonly label: string }

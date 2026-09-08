@@ -196,29 +196,46 @@ The monthly total, $11,940, matches the prototype exactly.
 *The $9,140 figure also appears in the Aug cash-outgoings footnote, where it is
 retained as seeded posted-history data.*
 
-### 3.5 Counts where the prototype shows more rows than it lists
+### 3.5 Counts — now derived from a full dataset
 
-| Filter | Prototype | App | Reason |
+Originally only the rows visible in the prototype were seeded, so every filter
+count fell short of the prototype's label. The dataset has since been filled out
+to a realistic working portfolio, and the counts now derive from real records:
+
+| Filter | Prototype | App | |
 | --- | --- | --- | --- |
-| Obligations "All" | 23 | 7 | 7 rows are shown; counts derive from records |
-| Documents "All" | 142 | 5 | 5 rows are shown |
-| Documents "Unlinked" | 2 | 1 | 1 unlinked row is shown |
-| Entities "All" | 6 | 5 | 5 entities are shown |
-| Leases "Active" | 7 | 6 | 6 leases are shown |
+| Obligations "All" | 23 | 23 | ✅ |
+| Obligations "Due this week" | 4 | 4 | ✅ |
+| Obligations "Overdue" | 2 | 2 | ✅ |
+| Obligations "No owner" | 1 | 1 | ✅ |
+| Documents "All" | 142 | 142 | ✅ |
+| Documents "Unlinked" | 2 | 2 | ✅ |
+| Entities "All" | 6 | 6 | ✅ |
 | Properties "All" | 5 | 5 | ✅ |
+| Leases "Active" | 7 | 6 | ⚠️ see below |
 
-Counts are derived so they can never contradict the list beneath them. Seeding
-the missing records would fabricate data; that is left for the real dataset.
+Counts are still *derived*, never hard-coded — they cannot contradict the list
+beneath them.
 
-### 3.6 "Due in next 14 days" — 2 items, $3,105
+**Leases "Active" remains 6, not 7.** A seventh active tenancy has nowhere
+coherent to live: the prototype shows Room 6 at Compton Rd vacant since 24 Aug
+(and targets it with the new-lease form) and Mians Rd vacant since its lease
+ended 20 Aug. Adding a seventh would contradict the property data on the same
+screen. Six ended tenancies are seeded instead, which explain both vacancy dates.
 
-The prototype's tile says "7 items · $9,320" while the card beneath it lists four
-obligations dated 14, 18, 22 and 30 September — a 24-day span, not 14.
+### 3.6 "Due in next 14 days" — now 7 items, $9,320 ✅
 
-The app uses one window for both, `UPCOMING_WINDOW_DAYS = 14`
-(`src/shared/config/app-config.ts`), giving 2 items totalling $3,105 (insurance
-$1,860 on 14 Sep, council rates $1,245 on 18 Sep). Changing that one constant to
-`24` restores the prototype's four-row card.
+Previously 2 items totalling $3,105, because only the obligations visible in the
+prototype were seeded. With the full obligation set the tile matches the
+prototype exactly: **7 items · $9,320**, from a 14-day window with no change to
+`UPCOMING_WINDOW_DAYS`.
+
+One detail still differs: the prototype's footer chip reads "1 without owner",
+whereas the app reads "All items owned". The unowned obligation (smoke alarm
+compliance) falls due 22 Sep, which the prototype's own table shows — two days
+outside the 14-day window. Keeping the prototype's date and an honest window
+means the chip reports the all-clear. The unowned item is still plainly flagged
+on the obligations screen itself.
 
 ### 3.7 Smaller derived differences
 
@@ -228,7 +245,6 @@ $1,860 on 14 Sep, council rates $1,245 on 18 Sep). Changing that one constant to
 | A. Nguyen arrears age | "Partial · 4 days" | "Partial · 12 days" | The reconcile screen dates that charge 25 Aug; 6 Sep − 25 Aug = 12 |
 | Cash outgoings delta | "–" (flat) | 3.5% | Aug $19,870 vs Jul $19,200 is a real +3.5%; the app shows it rather than suppressing it |
 | Bank import table | 5 rows | 38 rows | The prototype showed a sample; the app lists the whole staged import |
-| Obligations "Due this week" | 4 | 0 | 6 Sep + 7 days = 13 Sep; the next obligation is 14 Sep |
 
 ## 3.8 New screens added after the requirements document
 
@@ -245,7 +261,31 @@ No new CSS was written for any of them. Every element uses a class name already
 present in the prototype's stylesheet, which is why the class-usage audit still
 reports zero invented classes.
 
-## 3.9 Chart anchoring corrected
+## 3.9 Dataset filled out for demonstration
+
+The seed originally held only the rows the prototype displays, which left several
+screens looking empty and every filter tab under-populated. It now holds a
+realistic working portfolio:
+
+| Section | Before | Now |
+| --- | --- | --- |
+| Obligations | 7 | 23, across overdue / due-this-week / scheduled / paid |
+| Documents | 5 | 142 — rates notices, policies, statements, leases, invoices, certificates, entity records |
+| Expenses | 5 | 49 across ten categories and six months, one corrected and one voided |
+| Shared bills | 3 | 11, including three under the superseded 50/50 agreement |
+| Leases | 6 active | 6 active + 6 ended |
+| Entities | 5 | 6 |
+| Audit log | 6 | 28 |
+| Valuations | 5 | 12, giving each property a history |
+| Posted cash flow | 6 months | 12 months |
+
+**Properties, loans and arrears-bearing leases were deliberately left untouched**,
+because they drive the figures that already matched the prototype exactly: net
+worth $2,163,300, arrears $1,240 (3 tenants · 1 disputed), the 38/31/3/4 · $3,120
+import summary, and $11,940 of monthly repayments. All are unchanged, and the
+UAT-05 fixture test proves it.
+
+## 3.10 Chart anchoring corrected
 
 The cash-flow chart originally anchored on the month containing the as-of date,
 which appended an empty September bar — reading as a collapse in receipts rather
