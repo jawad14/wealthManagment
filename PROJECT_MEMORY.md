@@ -151,8 +151,21 @@ raise a toast.
   reseed a running dev server — restart it. This has cost time twice; it looks
   like stale data or a broken calculation.
 - **`pkill -f "next start"` does not kill the server.** The process is named
-  `next-server`. Use `lsof -i :3000 -sTCP:LISTEN` and kill the PID. This cost time
+  `next-server`. Use `lsof -ti :3000 -sTCP:LISTEN | xargs kill`. This cost time
   once: new routes appeared to 404 while a stale build was being served.
+- **Never run `npm run build` while a dev server is live.** Both write to
+  `.next`, and the production build overwrites chunks the running server still
+  holds references to. The result is a runtime error like
+  `Cannot find module './1331.js'` with a `webpack-runtime.js` require stack, and
+  `.next` ends up holding *both* `static/development` and a production
+  `server/webpack-runtime.js` — that mixture is the tell. Recovery:
+
+  ```bash
+  lsof -ti :3000 -sTCP:LISTEN | xargs -r kill
+  npm run clean && npm run build && npm run start
+  ```
+
+  Stop the server first, or build into a separate checkout.
 - `src/shared/config/navigation.ts` is the single source for the sidebar, mobile
   tab bar and page titles. Adding a screen means one entry there.
 - `DataTable` emits each column header as `data-l` on its cells; that attribute

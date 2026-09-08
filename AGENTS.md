@@ -104,6 +104,10 @@ in the page that composes both modules.
 npm test && npm run typecheck && npm run lint && npm run build
 ```
 
+**Stop any running dev server before `npm run build`.** Both write to `.next`, and
+building over a live server corrupts it — you get `Cannot find module './<n>.js'`
+at runtime. Recover with `npm run clean && npm run build`.
+
 The test suite encodes the requirements document's UAT-01…07 acceptance
 scenarios. If you change a calculation and a UAT test fails, the calculation is
 wrong until proven otherwise — those fixtures are hand-derived, not generated
