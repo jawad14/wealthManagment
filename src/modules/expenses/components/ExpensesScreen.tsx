@@ -6,9 +6,11 @@ import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { FilterGroup } from '@/shared/components/FilterGroup';
-import { Grid, Row, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
+import { Grid, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
 import { Timeline, type TimelineEntry } from '@/shared/components/Timeline';
-import { useToast } from '@/shared/shell/ToastContext';
+import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
+import { createExpenseAction, voidExpenseAction } from '../actions';
 import { formatMoney, type Money } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import { AMOUNT_BASIS_LABELS } from '@/shared/types/amounts';
@@ -37,6 +39,8 @@ export interface ExpensesScreenProps {
   readonly propertyNames: Record<string, string>;
   readonly entityNames: Record<string, string>;
   readonly userNames: Record<string, string>;
+  readonly documents: readonly { readonly id: string; readonly name: string }[];
+  readonly today: string;
 }
 
 /**
@@ -53,10 +57,12 @@ export function ExpensesScreen({
   propertyNames,
   entityNames,
   userNames,
+  documents,
+  today,
 }: ExpensesScreenProps) {
   const [filter, setFilter] = useState<ExpenseFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(viewsByFilter.all[0]?.expense.id ?? null);
-  const { toast } = useToast();
+  const [isCreating, setCreating] = useState(false);
 
   const rows = viewsByFilter[filter];
   const selected = [...viewsByFilter.all, ...viewsByFilter.voided].find(
@@ -168,7 +174,81 @@ export function ExpensesScreen({
           </CardBody>
         </Card>
 
-        {selected ? (
+        {isCreating ? (
+          <Card>
+            <CardHeader title="Record expense" aside={<Sub>Allocation and evidence</Sub>} />
+            <CardBody>
+              <ActionForm
+                action={createExpenseAction}
+                submitLabel="Record expense"
+                onCancel={() => setCreating(false)}
+                onSuccess={() => setCreating(false)}
+                footnote={
+                  <Sub style={{ fontSize: 12 }}>
+                    The effective date decides which period the cost belongs to; it is recorded separately from when you
+                    entered it.
+                  </Sub>
+                }
+              >
+                {({ fieldErrors }) => (
+                  <FieldGrid>
+                    <TextField
+                      id="exp-description" name="description" label="Description" required
+                      placeholder="Plumbing · leaking cistern"
+                      invalid={Boolean(firstError(fieldErrors, 'description'))}
+                      hint={firstError(fieldErrors, 'description')}
+                    />
+                    <TextField
+                      id="exp-amount" name="amount" label="Amount" required placeholder="486.20"
+                      invalid={Boolean(firstError(fieldErrors, 'amount'))}
+                      hint={firstError(fieldErrors, 'amount')}
+                    />
+                    <SelectField
+                      id="exp-category" name="category" label="Category" defaultValue="repairs"
+                      options={[
+                        { value: 'insurance', label: 'Insurance' },
+                        { value: 'rates', label: 'Council rates' },
+                        { value: 'utilities', label: 'Utilities' },
+                        { value: 'repairs', label: 'Repairs & maintenance' },
+                        { value: 'management', label: 'Management fees' },
+                        { value: 'body-corporate', label: 'Body corporate' },
+                        { value: 'compliance', label: 'Compliance' },
+                        { value: 'loan-interest', label: 'Loan interest' },
+                        { value: 'professional', label: 'Professional fees' },
+                        { value: 'other', label: 'Other' },
+                      ]}
+                    />
+                    <TextField id="exp-effective" name="effectiveOn" label="Effective date" type="date" defaultValue={today} required />
+                    <SelectField
+                      id="exp-entity" name="entityId" label="Entity" required
+                      options={Object.entries(entityNames).map(([id, name]) => ({ value: id, label: name }))}
+                    />
+                    <SelectField
+                      id="exp-property" name="propertyId" label="Property"
+                      options={[
+                        { value: '', label: 'Not property-specific' },
+                        ...Object.entries(propertyNames).map(([id, name]) => ({ value: id, label: name })),
+                      ]}
+                    />
+                    <SelectField
+                      id="exp-basis" name="basis" label="Amount basis" defaultValue="actual"
+                      hint="Anything other than actual is shown with a warning chip"
+                      options={[
+                        { value: 'actual', label: 'Actual — evidenced' },
+                        { value: 'forecast', label: 'Forecast' },
+                        { value: 'estimated', label: 'Estimated' },
+                      ]}
+                    />
+                    <SelectField
+                      id="exp-evidence" name="evidenceDocumentId" label="Evidence"
+                      options={[{ value: '', label: 'None yet' }, ...documents.map((d) => ({ value: d.id, label: d.name }))]}
+                    />
+                  </FieldGrid>
+                )}
+              </ActionForm>
+            </CardBody>
+          </Card>
+        ) : selected ? (
           <ExpenseDetail view={selected} userNames={userNames} propertyNames={propertyNames} entityNames={entityNames} />
         ) : null}
       </Grid>
@@ -184,7 +264,7 @@ export function ExpensesScreen({
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => toast('New expense form is not wired up in this build')}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
           + Record expense
         </Button>
       </Toolbar>
@@ -220,7 +300,6 @@ function ExpenseDetail({
   readonly propertyNames: Record<string, string>;
   readonly entityNames: Record<string, string>;
 }) {
-  const { toast } = useToast();
   const { expense, current } = view;
 
   const entries: readonly TimelineEntry[] = [
@@ -275,16 +354,30 @@ function ExpenseDetail({
           <Timeline entries={entries} />
         </div>
 
-        <Row>
-          <Button variant="gold" onClick={() => toast('Attach evidence is not wired up in this build')}>
-            Attach evidence
-          </Button>
-          {!view.isVoided ? (
-            <Button variant="ghost" onClick={() => toast('Voiding requires a reason; not wired up in this build')}>
-              Void expense
-            </Button>
-          ) : null}
-        </Row>
+        {!view.isVoided ? (
+          <ActionForm
+            action={voidExpenseAction}
+            submitLabel="Void expense"
+            submitVariant="ghost"
+            hiddenFields={{ expenseId: expense.id }}
+            footnote={
+              <Sub style={{ fontSize: 12 }}>
+                Voiding removes this from totals but keeps the record and every earlier version.
+              </Sub>
+            }
+          >
+            {({ fieldErrors }) => (
+              <FieldGrid>
+                <TextField
+                  id="void-reason" name="reason" label="Reason for voiding" required
+                  placeholder="Entered against the wrong property"
+                  invalid={Boolean(firstError(fieldErrors, 'reason'))}
+                  hint={firstError(fieldErrors, 'reason')}
+                />
+              </FieldGrid>
+            )}
+          </ActionForm>
+        ) : null}
       </CardBody>
     </Card>
   );

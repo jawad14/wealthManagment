@@ -139,23 +139,27 @@ The sidebar scope pill is present but static. Wire it to filter every screen by
 entity, property and period.
 
 ### J. Remaining requirement gaps
-In the order the document's own acceptance criteria demand:
 
-1. **FR-05 termination and rent changes** — "an early termination removes only
-   unearned future charges and leaves receipts intact" is not implemented, and
-   effective rent changes are not modelled.
-2. **FR-05 charge generation** — the schedule is previewed but not persisted on
-   lease creation.
-3. **FR-02 purchase and settlement costs** — required by the requirement text,
+Closed in session 4: FR-05 termination, effective rent changes and charge
+generation; all write paths for FR-01–09.
+
+Still open, in the order the document's acceptance criteria demand:
+
+1. **FR-02 purchase and settlement costs** — required by the requirement text,
    currently absent from `Property`.
-4. **FR-08 escalation** — "failure creates an owner task" needs a task entity.
-5. **FR-09 scope switching** — "filter by authorised entity/property/period"; the
+2. **FR-08 escalation** — "failure creates an owner task" needs a task entity,
+   and nothing runs the dispatch job on a schedule.
+3. **FR-09 scope switching** — "filter by authorised entity/property/period"; the
    sidebar scope pill is still static.
+4. **FR-04 file storage** — documents are metadata only; `registerDocumentAction`
+   says so rather than pretending an upload happened.
+5. **FR-06 CSV parsing and ledger posting** — the import is pre-staged, and
+   wizard step 5 does not exist.
 6. **UAT-06** — cannot pass until persistence and backups exist.
 
 ### K. Test coverage to extend
-110 tests cover BR-03/05/06, FR-04/07/09 and UAT-01/02/03/04/05/07. Not yet
-covered: the `properties` valuation-basis matrix, `documents` versioning, and the
-HTTP layer's error mapping. `Collection.reset()` (exposed on `leasesRepository`
+137 tests cover BR-03/05/06, FR-04/05/07/09, UAT-01/02/03/04/05/07 and every
+Server Action. Not yet covered: the `properties` valuation-basis matrix,
+`documents` versioning, and the HTTP layer's error mapping. `Collection.reset()` (exposed on `leasesRepository`
 and `obligationsRepository`) gives each test a clean fixture; add it to other
 repositories as they gain write paths.

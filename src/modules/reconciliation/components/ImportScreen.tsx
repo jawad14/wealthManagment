@@ -2,14 +2,16 @@
 
 import { useState } from 'react';
 import { Banner } from '@/shared/components/Banner';
-import { Card, CardBody } from '@/shared/components/Card';
+import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Kpi, KpiGrid } from '@/shared/components/Kpi';
 import { Stack, Sub } from '@/shared/components/Layout';
 import { Stepper, type StepperStep } from '@/shared/components/Stepper';
-import { useToast } from '@/shared/shell/ToastContext';
+import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { formatMoney } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import { StagedTransactionsTable } from './StagedTransactionsTable';
+import { allocateTransactionAction } from '../actions';
 import type { BankImport, ImportSummary, StagedTransaction } from '../model';
 
 export interface ImportScreenProps {
@@ -20,6 +22,8 @@ export interface ImportScreenProps {
   readonly highConfidenceCount: number;
   /** Formatted period label, e.g. "1–31 Aug 2026 · CSV". */
   readonly periodLabel: string;
+  /** Allocation targets, resolved on the server. */
+  readonly allocationOptions: readonly { readonly value: string; readonly label: string }[];
 }
 
 /** FR-06 — bank import wizard and matching review. */
@@ -30,15 +34,9 @@ export function ImportScreen({
   transactions,
   highConfidenceCount,
   periodLabel,
+  allocationOptions,
 }: ImportScreenProps) {
-  const { toast } = useToast();
-  const [rows, setRows] = useState(transactions);
-
-  const markConfirmed = (ids: readonly string[]): void => {
-    setRows((current) =>
-      current.map((row) => (ids.includes(row.id) ? { ...row, state: 'confirmed' as const } : row)),
-    );
-  };
+  const [allocating, setAllocating] = useState<StagedTransaction | null>(null);
 
   return (
     <Stack>
@@ -56,14 +54,7 @@ export function ImportScreen({
           } were skipped`}
         >
           Matched on date, amount and bank reference. Balances are unchanged.{' '}
-          <a
-            href="#skipped"
-            style={{ color: 'inherit', textDecoration: 'underline' }}
-            onClick={(event) => {
-              event.preventDefault();
-              toast('Skipped-row review is not wired up in this build');
-            }}
-          >
+          <a href="#skipped-rows" style={{ color: 'inherit', textDecoration: 'underline' }}>
             Review skipped rows
           </a>
         </Banner>
@@ -96,19 +87,48 @@ export function ImportScreen({
         />
       </KpiGrid>
 
+      {allocating ? (
+        <Card>
+          <CardHeader
+            title={`Allocate · ${allocating.rawDescription}`}
+            aside={<Sub>{formatMoney(allocating.amount, { showCents: true, signed: true })} on {formatDateShort(allocating.date)}</Sub>}
+          />
+          <CardBody>
+            <ActionForm
+              action={allocateTransactionAction}
+              submitLabel="Allocate and confirm"
+              onCancel={() => setAllocating(null)}
+              onSuccess={() => setAllocating(null)}
+              hiddenFields={{ transactionId: allocating.id }}
+              footnote={
+                <Sub style={{ fontSize: 12 }}>
+                  Your correction is stored alongside the original suggestion. The raw bank text is never rewritten.
+                </Sub>
+              }
+            >
+              {({ fieldErrors }) => (
+                <FieldGrid>
+                  <SelectField
+                    id="alloc-target"
+                    name="allocation"
+                    label="Allocate to"
+                    required
+                    invalid={Boolean(firstError(fieldErrors, 'allocation'))}
+                    hint={firstError(fieldErrors, 'allocation')}
+                    options={[{ value: '', label: 'Choose…' }, ...allocationOptions]}
+                  />
+                  <TextField id="alloc-note" name="note" label="Note" placeholder="Why this allocation" />
+                </FieldGrid>
+              )}
+            </ActionForm>
+          </CardBody>
+        </Card>
+      ) : null}
+
       <StagedTransactionsTable
-        rows={rows}
+        rows={transactions}
         highConfidenceCount={highConfidenceCount}
-        onConfirm={(row) => {
-          markConfirmed([row.id]);
-          toast(`Confirmed · ${row.rawDescription}`);
-        }}
-        onChange={(row) => toast(`Re-allocating "${row.rawDescription}" is not wired up in this build`)}
-        onConfirmAll={() => {
-          const ids = rows.filter((row) => row.state === 'auto-matched').map((row) => row.id);
-          markConfirmed(ids);
-          toast(`Confirmed ${ids.length} high-confidence rows`);
-        }}
+        onAllocate={setAllocating}
       />
 
       <Sub style={{ fontSize: 12 }}>

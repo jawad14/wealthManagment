@@ -75,7 +75,7 @@ future instances.
 **Gaps** — **no file upload or storage** (documents are metadata only); no expense
 entry/correction UI.
 
-### FR-05 · Leases and payment schedules — **Partial**
+### FR-05 · Leases and payment schedules — **Done**
 > Property-level and room-level leases with tenant, dates, rent, frequency,
 > effective rent changes and billing reference. Create expected charges from lease
 > dates. Amendments must preserve paid history and stop future charges after
@@ -83,12 +83,11 @@ entry/correction UI.
 
 | Acceptance criterion | Status |
 | --- | --- |
-| A fortnightly lease generates the agreed due dates | ⚠️ schedule is computed and previewed (53 charges), but **charges are not persisted on creation** |
-| Early termination removes only unearned future charges, leaving receipts intact | ❌ **not implemented** |
+| A fortnightly lease generates the agreed due dates | ✅ `generateCharges` runs inside `createLeaseAction`, so a lease cannot exist without its schedule |
+| Early termination removes only unearned future charges, leaving receipts intact | ✅ `tests/fr-05-lease-lifecycle.test.ts` — a future charge with a receipt against it is kept |
+| Amendments preserve paid history | ✅ `changeRent` reprices only future *unpaid* charges |
 
-**Gaps** — **effective rent changes not modelled**; **termination behaviour not
-implemented**; charge generation on lease creation missing. Proration is
-correctly surfaced as an unapproved policy rather than guessed.
+Proration remains correctly surfaced as an unapproved policy rather than guessed.
 
 ### FR-06 · Receipt reconciliation and arrears — **Partial**
 > Import a defined bank CSV, detect duplicate imports, allocate receipts across
@@ -101,7 +100,7 @@ correctly surfaced as an unapproved policy rather than guessed.
 | $500 charge, $300 receipt → arrears $200 | ✅ `tests/uat-02-reconciliation.test.ts` |
 | Importing that receipt twice does not change the balance | ✅ idempotent on `bankTransactionId` |
 | A reversal restores the correct outstanding amount | ✅ negative allocation, original retained |
-| Suggested matches require confirmation | ✅ nothing posts without a human |
+| Suggested matches require confirmation | ✅ nothing posts without a human; confirmation now persists via a Server Action |
 | Disputed balances suppress collection reminders | ✅ `tests/uat-03-reminders.test.ts` |
 
 **Gaps** — **no CSV parsing** (the import is pre-staged); **no matching engine**
@@ -155,6 +154,10 @@ template approval; quiet hours defer but do not requeue.
 | Show missing or stale data | ✅ attention strip + caveats on drill-down lines |
 | Filter by authorised entity/property/period | ❌ **scope switcher is static** |
 
+Write paths for FR-01–09 are wired: every action button on every screen now calls
+a Server Action that validates its input, calls the module service, records an
+audit entry and revalidates. `tests/actions.test.ts` covers all of them.
+
 ---
 
 ## 2. Later releases — correctly out of scope
@@ -207,7 +210,7 @@ template approval; quiet hours defer but do not requeue.
 | **UAT-06** | Restore the deployment from backup and reconcile record counts and sample balances | ❌ **Not possible** — no persistence or backup exists |
 | **UAT-07** | Stale valuations, missing due dates and unmatched transactions are clearly flagged | ✅ `tests/uat-07-data-quality.test.ts` (10 tests) |
 
-**110 tests, all passing.** Run with `npm test`.
+**137 tests, all passing.** Run with `npm test`.
 
 ---
 

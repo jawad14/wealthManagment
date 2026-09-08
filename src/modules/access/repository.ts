@@ -13,7 +13,9 @@ const auditEvents = createCollection<AuditEvent>('access.audit', seedAuditEvents
 export const accessRepository = {
   listUsers: (): readonly User[] => users.list(),
   findUser: (id: UserId): User | undefined => users.find(id),
+  insertUser: (user: User): User => users.insert(user),
   listGrants: (): readonly AccessGrant[] => grants.list(),
+  insertGrant: (grant: AccessGrant): AccessGrant => grants.insert(grant),
   findGrantForUser: (userId: UserId): AccessGrant | undefined => grants.findBy((grant) => grant.userId === userId),
   /** Audit events, newest first. */
   listAuditEvents: (): readonly AuditEvent[] => [...auditEvents.list()].sort((a, b) => b.at.localeCompare(a.at)),

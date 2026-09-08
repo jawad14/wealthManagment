@@ -7,8 +7,10 @@ import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { FilterGroup } from '@/shared/components/FilterGroup';
 import { Kpi, KpiGrid } from '@/shared/components/Kpi';
-import { Grid, Row, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
-import { useToast } from '@/shared/shell/ToastContext';
+import { Grid, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
+import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
+import { createSharedBillAction, recordRecoveryReviewAction } from '../actions';
 import { formatMoney, type Money } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import {
@@ -34,6 +36,7 @@ export interface SharedBillsScreenProps {
   readonly totalOwnerExpense: Money;
   /** Property names resolved on the server, keyed by property id. */
   readonly propertyNames: Record<string, string>;
+  readonly today: string;
 }
 
 /**
@@ -49,12 +52,13 @@ export function SharedBillsScreen({
   totalRecovered,
   totalOwnerExpense,
   propertyNames,
+  today,
 }: SharedBillsScreenProps) {
   const [filter, setFilter] = useState<SharedBillFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(
     allocationsByFilter.all[0]?.bill.id ?? null,
   );
-  const { toast } = useToast();
+  const [isCreating, setCreating] = useState(false);
 
   const rows = allocationsByFilter[filter];
   const selected = allocationsByFilter.all.find((entry) => entry.bill.id === selectedId) ?? null;
@@ -167,7 +171,7 @@ export function SharedBillsScreen({
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => toast('New shared bill form is not wired up in this build')}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
           + Add shared bill
         </Button>
       </Toolbar>
@@ -185,7 +189,61 @@ export function SharedBillsScreen({
           />
         </Card>
 
-        {selected ? <BillDetail allocation={selected} propertyNames={propertyNames} /> : null}
+        {isCreating ? (
+          <Card>
+            <CardHeader title="Add shared bill" aside={<Sub>Split comes from the approved agreement</Sub>} />
+            <CardBody>
+              <ActionForm
+                action={createSharedBillAction}
+                submitLabel="Record bill"
+                onCancel={() => setCreating(false)}
+                onSuccess={() => setCreating(false)}
+                footnote={
+                  <Sub style={{ fontSize: 12 }}>
+                    The agreement in force for the bill&apos;s period decides the split. If none is approved, the whole
+                    amount is treated as an owner cost until one is recorded.
+                  </Sub>
+                }
+              >
+                {({ fieldErrors }) => (
+                  <FieldGrid>
+                    <SelectField
+                      id="bill-property" name="propertyId" label="Property" required
+                      options={Object.entries(propertyNames).map(([id, name]) => ({ value: id, label: name }))}
+                    />
+                    <SelectField
+                      id="bill-category" name="category" label="Category" defaultValue="water"
+                      options={[
+                        { value: 'water', label: 'Water' },
+                        { value: 'electricity', label: 'Electricity' },
+                        { value: 'gas', label: 'Gas' },
+                        { value: 'internet', label: 'Internet' },
+                        { value: 'cleaning', label: 'Cleaning' },
+                        { value: 'other', label: 'Other' },
+                      ]}
+                    />
+                    <TextField id="bill-supplier" name="supplier" label="Supplier" required placeholder="Urban Utilities" />
+                    <TextField id="bill-reference" name="reference" label="Reference" placeholder="4471" />
+                    <TextField
+                      id="bill-total" name="total" label="Bill total" required placeholder="412.00"
+                      invalid={Boolean(firstError(fieldErrors, 'total'))}
+                      hint={firstError(fieldErrors, 'total')}
+                    />
+                    <TextField id="bill-due" name="dueOn" label="Due date" type="date" defaultValue={today} required />
+                    <TextField id="bill-from" name="periodFrom" label="Period from" type="date" required />
+                    <TextField
+                      id="bill-to" name="periodTo" label="Period to" type="date" required
+                      invalid={Boolean(firstError(fieldErrors, 'periodTo'))}
+                      hint={firstError(fieldErrors, 'periodTo')}
+                    />
+                  </FieldGrid>
+                )}
+              </ActionForm>
+            </CardBody>
+          </Card>
+        ) : selected ? (
+          <BillDetail allocation={selected} propertyNames={propertyNames} today={today} />
+        ) : null}
       </Grid>
 
       <Sub style={{ fontSize: 12 }}>
@@ -199,11 +257,12 @@ export function SharedBillsScreen({
 function BillDetail({
   allocation,
   propertyNames,
+  today,
 }: {
   readonly allocation: BillAllocation;
   readonly propertyNames: Record<string, string>;
+  readonly today: string;
 }) {
-  const { toast } = useToast();
   const { bill, agreement, shares, rejection } = allocation;
 
   return (
@@ -264,12 +323,34 @@ function BillDetail({
           </div>
         )}
 
-        <Row>
-          <Button variant="gold" onClick={() => toast('Recovery review is not wired up in this build')}>
-            Record recovery review
-          </Button>
-          <Button onClick={() => toast('Agreement editing is not wired up in this build')}>View agreement</Button>
-        </Row>
+        {bill.recoveryReviewedOn === null ? (
+          <ActionForm
+            action={recordRecoveryReviewAction}
+            submitLabel="Record recovery review"
+            submitVariant="gold"
+            hiddenFields={{ billId: bill.id }}
+            footnote={
+              <Sub style={{ fontSize: 12 }}>
+                Recoverability and any deadline are recorded from your review. The platform never infers them.
+              </Sub>
+            }
+          >
+            {({ fieldErrors }) => (
+              <FieldGrid>
+                <TextField id="rev-on" name="reviewedOn" label="Reviewed on" type="date" defaultValue={today} required />
+                <TextField
+                  id="rev-deadline" name="deadline" label="Recovery deadline" type="date"
+                  hint={firstError(fieldErrors, 'deadline') ?? 'Leave blank if none applies'}
+                />
+              </FieldGrid>
+            )}
+          </ActionForm>
+        ) : (
+          <Sub style={{ fontSize: 12 }}>
+            Recoverability reviewed on {bill.recoveryReviewedOn}
+            {bill.recoveryDeadline ? ` · deadline ${bill.recoveryDeadline}` : ' · no deadline recorded'}.
+          </Sub>
+        )}
       </CardBody>
     </Card>
   );

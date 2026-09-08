@@ -4,11 +4,16 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/shared/components/Button';
 import { FilterGroup } from '@/shared/components/FilterGroup';
 import { Grid, Stack, Toolbar } from '@/shared/components/Layout';
-import { useToast } from '@/shared/shell/ToastContext';
 import type { TimelineEntry } from '@/shared/components/Timeline';
 import { ObligationsTable } from './ObligationsTable';
 import { ObligationDetail } from './ObligationDetail';
+import { NewObligationForm } from './NewObligationForm';
 import type { ObligationFilter, ObligationView } from '../service';
+
+export interface NamedRecord {
+  readonly id: string;
+  readonly name: string;
+}
 
 export interface ObligationsScreenProps {
   /** Pre-computed views for every filter, so switching filters needs no round-trip. */
@@ -19,6 +24,11 @@ export interface ObligationsScreenProps {
   /** Property and holding-entity names keyed by obligation id. */
   readonly context: Record<string, { readonly propertyName: string | null; readonly entityName: string | null }>;
   readonly initialSelectedId: string | null;
+  /** Options the detail and create forms need, resolved on the server. */
+  readonly people: readonly NamedRecord[];
+  readonly properties: readonly NamedRecord[];
+  readonly documents: readonly NamedRecord[];
+  readonly today: string;
 }
 
 const FILTER_OPTIONS: readonly { value: ObligationFilter; label: string }[] = [
@@ -36,10 +46,14 @@ export function ObligationsScreen({
   timelines,
   context,
   initialSelectedId,
+  people,
+  properties,
+  documents,
+  today,
 }: ObligationsScreenProps) {
   const [filter, setFilter] = useState<ObligationFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
-  const { toast } = useToast();
+  const [isCreating, setCreating] = useState(false);
 
   const rows = viewsByFilter[filter];
   const selected = useMemo(
@@ -61,19 +75,37 @@ export function ObligationsScreen({
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => toast('New obligation form is not wired up in this build')}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
           + New obligation
         </Button>
       </Toolbar>
 
       <Grid columns={2}>
-        <ObligationsTable rows={rows} selectedId={selectedId} onSelect={setSelectedId} />
-        {selected ? (
+        <ObligationsTable
+          rows={rows}
+          selectedId={selectedId}
+          onSelect={(id) => {
+            setSelectedId(id);
+            setCreating(false);
+          }}
+        />
+
+        {isCreating ? (
+          <NewObligationForm
+            people={people}
+            properties={properties}
+            defaultDueOn={today}
+            onClose={() => setCreating(false)}
+          />
+        ) : selected ? (
           <ObligationDetail
             view={selected}
             timeline={timelines[selected.obligation.id] ?? []}
             propertyName={context[selected.obligation.id]?.propertyName ?? null}
             holdingEntityName={context[selected.obligation.id]?.entityName ?? null}
+            documents={documents}
+            people={people}
+            today={today}
           />
         ) : null}
       </Grid>

@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { addDays, addMonths, daysBetween, isBefore } from '@/shared/lib/dates';
 import { addMoney, money, scaleMoney, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
-import type { IsoDate, LeaseId, PropertyId, RentChargeId, UserId } from '@/shared/types/common';
+import { asId, type IsoDate, type LeaseId, type PropertyId, type RentChargeId, type UserId } from '@/shared/types/common';
 import { propertiesService } from '@/modules/properties/service';
 import { leasesRepository } from './repository';
 import {
@@ -14,6 +14,7 @@ import {
   type ArrearsState,
   type Lease,
   type LeaseStatus,
+  type RentCharge,
   type RentAllocation,
   type RentFrequency,
 } from './model';
@@ -341,6 +342,112 @@ export const leasesService = {
       reversesAllocationId: original.id,
       note: input.note,
     });
+  },
+
+  /**
+   * Generate the expected charges for a lease (FR-05).
+   *
+   * "Create expected charges from lease dates." Charges are written once, at
+   * creation; they are facts about what is owed, not a view recomputed on read,
+   * because receipts get allocated against them.
+   */
+  generateCharges(leaseId: LeaseId): readonly RentCharge[] {
+    const lease = leasesService.require(leaseId);
+    const created: RentCharge[] = [];
+
+    let cursor = lease.chargeAnchorOn;
+    for (let index = 0; index < 1000 && !isBefore(lease.endsOn, cursor); index += 1) {
+      created.push(
+        leasesRepository.insertCharge({
+          id: asId<'RentCharge'>(`chg-${randomUUID()}`),
+          leaseId,
+          dueOn: cursor,
+          amount: lease.rent,
+        }),
+      );
+      cursor = nextPeriod(cursor, lease.frequency);
+    }
+    return created;
+  },
+
+  /**
+   * End a lease early (FR-05).
+   *
+   * "An early termination removes only unearned future charges and leaves
+   * receipts intact." Charges on or before the termination date were earned and
+   * stay, as does everything allocated against them. Only charges falling
+   * entirely after the date are removed — and only if nothing has been allocated
+   * to them, because a charge with a receipt against it is no longer unearned.
+   */
+  terminate(input: {
+    readonly leaseId: LeaseId;
+    readonly endsOn: IsoDate;
+    readonly reason: string;
+  }): { readonly lease: Lease; readonly removedCharges: number; readonly keptCharges: number } {
+    const lease = leasesService.require(input.leaseId);
+    if (isBefore(input.endsOn, lease.startsOn)) {
+      throw new ValidationError('A lease cannot end before it started.');
+    }
+    if (isBefore(lease.endsOn, input.endsOn)) {
+      throw new ValidationError('That date is after the lease already ends.');
+    }
+    if (!input.reason.trim()) {
+      throw new ValidationError('Recording a termination requires a reason.');
+    }
+
+    const charges = leasesRepository.listCharges(input.leaseId);
+    let removed = 0;
+
+    for (const charge of charges) {
+      if (!isBefore(input.endsOn, charge.dueOn)) continue; // due on or before the end date: earned
+
+      const allocated = leasesRepository.listAllocations(charge.id);
+      // A charge someone has already paid against is not unearned; leave it and
+      // its receipts alone.
+      if (allocated.length > 0) continue;
+
+      leasesRepository.removeCharge(charge.id);
+      removed += 1;
+    }
+
+    const updated = leasesRepository.update(input.leaseId, { endsOn: input.endsOn });
+    if (!updated) throw new NotFoundError('Lease', input.leaseId);
+
+    return { lease: updated, removedCharges: removed, keptCharges: charges.length - removed };
+  },
+
+  /**
+   * Change the rent from an effective date (FR-05).
+   *
+   * Only charges falling on or after the effective date are repriced, and only
+   * those nothing has been allocated against. Paid history is never restated —
+   * repricing a settled charge would silently create or erase arrears.
+   */
+  changeRent(input: {
+    readonly leaseId: LeaseId;
+    readonly newRent: Money;
+    readonly effectiveFrom: IsoDate;
+  }): { readonly lease: Lease; readonly repricedCharges: number } {
+    const lease = leasesService.require(input.leaseId);
+    if (input.newRent.cents <= 0) {
+      throw new ValidationError('Rent must be greater than zero.');
+    }
+    if (isBefore(input.effectiveFrom, lease.startsOn)) {
+      throw new ValidationError('A rent change cannot take effect before the lease started.');
+    }
+
+    let repriced = 0;
+    for (const charge of leasesRepository.listCharges(input.leaseId)) {
+      if (isBefore(charge.dueOn, input.effectiveFrom)) continue;
+      if (leasesRepository.listAllocations(charge.id).length > 0) continue;
+
+      leasesRepository.updateCharge(charge.id, { amount: input.newRent });
+      repriced += 1;
+    }
+
+    const updated = leasesRepository.update(input.leaseId, { rent: input.newRent });
+    if (!updated) throw new NotFoundError('Lease', input.leaseId);
+    return { lease: updated, repricedCharges: repriced };
   },
 
   /**

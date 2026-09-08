@@ -4,6 +4,8 @@ import { obligationsService, type ObligationFilter } from '@/modules/obligations
 import { propertiesService } from '@/modules/properties/service';
 import { entitiesService } from '@/modules/entities/service';
 import { ObligationsScreen } from '@/modules/obligations/components/ObligationsScreen';
+import { accessService } from '@/modules/access/service';
+import { documentsService } from '@/modules/documents/service';
 import type { TimelineEntry } from '@/shared/components/Timeline';
 
 export const metadata: Metadata = { title: 'Obligations & reminders · Holdfast' };
@@ -55,6 +57,14 @@ export default function ObligationsPage() {
       timelines={timelines}
       context={context}
       initialSelectedId={initialSelected}
+      today={asOf}
+      people={accessService.listAccess().map((row) => ({ id: row.user.id, name: row.user.name }))}
+      properties={propertiesService.list().map((property) => ({ id: property.id, name: property.name }))}
+      // Receipts and invoices are what evidence a payment; offering the whole
+      // register would bury them.
+      documents={documentsService
+        .list('invoices-receipts')
+        .map((view) => ({ id: view.record.id, name: view.record.filename }))}
     />
   );
 }

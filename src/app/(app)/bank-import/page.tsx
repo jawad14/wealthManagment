@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
 import { reconciliationService } from '@/modules/reconciliation/service';
+import { propertiesService } from '@/modules/properties/service';
+import { obligationsService } from '@/modules/obligations/service';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 import { ImportScreen } from '@/modules/reconciliation/components/ImportScreen';
 import { formatDateShort, toDate } from '@/shared/lib/dates';
 import { Card, CardBody } from '@/shared/components/Card';
@@ -34,6 +37,17 @@ export default function BankImportPage() {
       transactions={reconciliationService.listTransactions(bankImport.id)}
       highConfidenceCount={reconciliationService.highConfidenceCount(bankImport.id)}
       periodLabel={periodLabel}
+      allocationOptions={[
+        ...propertiesService.list().map((property) => ({
+          value: `Property · ${property.name}`,
+          label: `Property · ${property.name}`,
+        })),
+        ...obligationsService.listViews(resolveAsOfDate(), 'all').slice(0, 12).map((view) => ({
+          value: `Obligation · ${view.obligation.title}`,
+          label: `Obligation · ${view.obligation.title}`,
+        })),
+        { value: 'Internal transfer · excluded from cash flow', label: 'Internal transfer · excluded from cash flow' },
+      ]}
     />
   );
 }

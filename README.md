@@ -23,7 +23,7 @@ npm run dev          # http://localhost:3000
 ```
 
 ```bash
-npm test             # 110 tests, incl. the document's UAT-01…07 scenarios
+npm test             # 137 tests, incl. the document's UAT-01…07 scenarios
 npm run typecheck    # tsc --noEmit
 npm run lint
 npm run build

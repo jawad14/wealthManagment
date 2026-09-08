@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { accessApi } from '@/modules/access/api';
+import { propertiesService } from '@/modules/properties/service';
 import { AccessScreen } from '@/modules/access/components/AccessScreen';
 import type { TimelineEntry } from '@/shared/components/Timeline';
 
@@ -17,6 +18,11 @@ export default function AccessPage() {
   }));
 
   return (
-    <AccessScreen people={overview.people} auditEntries={auditEntries} continuity={overview.continuity} />
+    <AccessScreen
+      people={overview.people}
+      auditEntries={auditEntries}
+      continuity={overview.continuity}
+      properties={propertiesService.list().map((property) => ({ id: property.id, name: property.name }))}
+    />
   );
 }

@@ -3,6 +3,8 @@ import { expensesService, type ExpenseFilter } from '@/modules/expenses/service'
 import { propertiesService } from '@/modules/properties/service';
 import { entitiesService } from '@/modules/entities/service';
 import { accessService } from '@/modules/access/service';
+import { documentsService } from '@/modules/documents/service';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 import { ExpensesScreen } from '@/modules/expenses/components/ExpensesScreen';
 import type { ExpenseView } from '@/modules/expenses/model';
 
@@ -28,6 +30,11 @@ export default function ExpensesPage() {
       propertyNames={Object.fromEntries(propertiesService.list().map((p) => [p.id, p.name]))}
       entityNames={Object.fromEntries(entitiesService.listEntities().map((e) => [e.id, e.name]))}
       userNames={Object.fromEntries(accessService.listAccess().map((row) => [row.user.id, row.user.name]))}
+      today={resolveAsOfDate()}
+      documents={documentsService
+        .list('invoices-receipts')
+        .slice(0, 40)
+        .map((view) => ({ id: view.record.id, name: view.record.filename }))}
     />
   );
 }

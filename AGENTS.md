@@ -23,7 +23,22 @@ repository.ts data access      — the ONLY file that touches the collection
 model.ts     types + invariants
 validation.ts Zod schemas at the boundary
 api.ts       transport-agnostic handlers (no NextRequest/NextResponse)
+actions.ts   Server Actions    — parse FormData, call the service, revalidate
 ```
+
+**Server Actions never throw across the boundary.** A thrown error reaches the
+client as an opaque digest, which is useless to someone filling in a form. Wrap
+the work in `runAction` and return an `ActionResult`; attach `fieldErrors` to a
+`ValidationError`'s `details` so the form can mark the offending input:
+
+```ts
+throw new ValidationError('Enter an amount greater than zero.', {
+  fieldErrors: { amount: ['An expense must be greater than zero.'] },
+});
+```
+
+Read form values through `@/shared/lib/form-data` — it handles "$1,860.00" and
+keeps "empty means absent, not zero" in one place.
 
 Route files in `src/app/api/**` are thin adapters. If a route file contains
 business logic, it is in the wrong place.

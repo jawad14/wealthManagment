@@ -11,7 +11,11 @@ import { formatMoney } from '@/shared/lib/money';
 import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
-import { useToast } from '@/shared/shell/ToastContext';
+import { Card as PanelCard, CardBody, CardHeader } from '@/shared/components/Card';
+import { FieldGrid, TextField } from '@/shared/components/Field';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
+import { Sub } from '@/shared/components/Layout';
+import { changeRentAction, terminateLeaseAction } from '../actions';
 import { FREQUENCY_SUFFIX, type LeaseStatus } from '../model';
 import type { LeaseFilter, LeaseView } from '../service';
 import { NewLeaseForm, type NewLeaseFormProps } from './NewLeaseForm';
@@ -75,12 +79,19 @@ export interface LeasesScreenProps {
   readonly viewsByFilter: Record<LeaseFilter, readonly LeaseView[]>;
   readonly counts: Record<LeaseFilter, number>;
   readonly newLease: NewLeaseFormProps;
+  readonly properties: readonly { readonly id: string; readonly name: string }[];
+  readonly today: string;
 }
 
+/** Which lifecycle panel is open for the selected lease. */
+type LeasePanel = { readonly kind: 'terminate' | 'rent'; readonly view: LeaseView } | null;
+
 /** FR-05 — leases, tenants and the new-lease form. */
-export function LeasesScreen({ viewsByFilter, counts, newLease }: LeasesScreenProps) {
+export function LeasesScreen({ viewsByFilter, counts, newLease, today }: LeasesScreenProps) {
   const [filter, setFilter] = useState<LeaseFilter>('active');
-  const { toast } = useToast();
+  const [panel, setPanel] = useState<LeasePanel>(null);
+  const [isCreating, setCreating] = useState(false);
+  const close = (): void => setPanel(null);
 
   return (
     <Stack>
@@ -95,7 +106,7 @@ export function LeasesScreen({ viewsByFilter, counts, newLease }: LeasesScreenPr
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => toast('Use the form on the right to create a lease')}>
+        <Button variant="primary" onClick={() => setCreating(true)}>
           + New lease
         </Button>
       </Toolbar>
@@ -106,10 +117,92 @@ export function LeasesScreen({ viewsByFilter, counts, newLease }: LeasesScreenPr
             columns={columns}
             rows={viewsByFilter[filter]}
             rowKey={(row) => row.lease.id}
+            onRowClick={(row) => setPanel({ kind: 'terminate', view: row })}
+            isRowSelected={(row) => row.lease.id === panel?.view.lease.id}
+            rowStyle={(row) => (row.lease.id === panel?.view.lease.id ? { background: 'var(--gold-soft)' } : undefined)}
             empty="No leases match this filter."
           />
         </Card>
-        <NewLeaseForm {...newLease} />
+
+        {panel ? (
+          <PanelCard>
+            <CardHeader
+              title={`${panel.view.tenantName} · ${panel.view.lease.reference}`}
+              aside={
+                <Button
+                  small
+                  variant="ghost"
+                  onClick={() => setPanel({ kind: panel.kind === 'rent' ? 'terminate' : 'rent', view: panel.view })}
+                >
+                  {panel.kind === 'rent' ? 'End lease early' : 'Change rent'}
+                </Button>
+              }
+            />
+            <CardBody>
+              {panel.kind === 'terminate' ? (
+                <ActionForm
+                  action={terminateLeaseAction}
+                  submitLabel="End lease"
+                  onCancel={close}
+                  onSuccess={close}
+                  hiddenFields={{ leaseId: panel.view.lease.id }}
+                  footnote={
+                    <Sub style={{ fontSize: 12 }}>
+                      Only unearned future charges are removed. Charges already due, and anything received against them,
+                      are left untouched.
+                    </Sub>
+                  }
+                >
+                  {({ fieldErrors }) => (
+                    <FieldGrid>
+                      <TextField
+                        id="term-date" name="endsOn" label="New end date" type="date" defaultValue={today} required
+                        invalid={Boolean(firstError(fieldErrors, 'endsOn'))}
+                        hint={firstError(fieldErrors, 'endsOn')}
+                      />
+                      <TextField
+                        id="term-reason" name="reason" label="Reason" required placeholder="Tenant relocating"
+                        invalid={Boolean(firstError(fieldErrors, 'reason'))}
+                        hint={firstError(fieldErrors, 'reason')}
+                      />
+                    </FieldGrid>
+                  )}
+                </ActionForm>
+              ) : (
+                <ActionForm
+                  action={changeRentAction}
+                  submitLabel="Change rent"
+                  onCancel={close}
+                  onSuccess={close}
+                  hiddenFields={{ leaseId: panel.view.lease.id }}
+                  footnote={
+                    <Sub style={{ fontSize: 12 }}>
+                      Only future unpaid charges are repriced. Paid history is never restated.
+                    </Sub>
+                  }
+                >
+                  {({ fieldErrors }) => (
+                    <FieldGrid>
+                      <TextField
+                        id="rent-new" name="rent" label="New rent" required
+                        defaultValue={(panel.view.lease.rent.cents / 100).toFixed(2)}
+                        invalid={Boolean(firstError(fieldErrors, 'rent'))}
+                        hint={firstError(fieldErrors, 'rent')}
+                      />
+                      <TextField
+                        id="rent-from" name="effectiveFrom" label="Effective from" type="date" defaultValue={today} required
+                      />
+                    </FieldGrid>
+                  )}
+                </ActionForm>
+              )}
+            </CardBody>
+          </PanelCard>
+        ) : isCreating ? (
+          <NewLeaseForm {...newLease} onClose={() => setCreating(false)} />
+        ) : (
+          <NewLeaseForm {...newLease} />
+        )}
       </Grid>
     </Stack>
   );

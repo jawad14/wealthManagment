@@ -7,10 +7,19 @@ import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { FilterGroup } from '@/shared/components/FilterGroup';
 import { Icon } from '@/shared/components/Icon';
+import { Card as PanelCard, CardBody, CardHeader } from '@/shared/components/Card';
+import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { Stack, Sub, Toolbar } from '@/shared/components/Layout';
-import { useToast } from '@/shared/shell/ToastContext';
+import { linkDocumentAction, registerDocumentAction } from '../actions';
 import { DOCUMENT_FILTER_LABELS, type DocumentFilter } from '../model';
 import type { DocumentView } from '../service';
+
+/** `type:id:label` — a link needs all three, so the option carries all three. */
+export interface LinkTarget {
+  readonly value: string;
+  readonly label: string;
+}
 
 const FILTER_ORDER: readonly DocumentFilter[] = [
   'all',
@@ -25,12 +34,14 @@ const FILTER_ORDER: readonly DocumentFilter[] = [
 export interface DocumentsScreenProps {
   readonly rowsByFilter: Record<DocumentFilter, readonly DocumentView[]>;
   readonly counts: Record<DocumentFilter, number>;
+  readonly linkTargets: readonly LinkTarget[];
 }
 
 /** FR-04 — the document register. */
-export function DocumentsScreen({ rowsByFilter, counts }: DocumentsScreenProps) {
+export function DocumentsScreen({ rowsByFilter, counts, linkTargets }: DocumentsScreenProps) {
   const [filter, setFilter] = useState<DocumentFilter>('all');
-  const { toast } = useToast();
+  const [panel, setPanel] = useState<{ readonly kind: 'register' } | { readonly kind: 'link'; readonly view: DocumentView } | null>(null);
+  const close = (): void => setPanel(null);
 
   const columns: readonly DataTableColumn<DocumentView>[] = [
     {
@@ -77,12 +88,12 @@ export function DocumentsScreen({ rowsByFilter, counts }: DocumentsScreenProps) 
       align: 'right',
       render: (row) =>
         row.linkLabel === null ? (
-          <Button small onClick={() => toast('Linking is not wired up in this build')}>
+          <Button small onClick={() => setPanel({ kind: 'link', view: row })}>
             Link to record
           </Button>
         ) : (
-          <Button small variant="ghost" onClick={() => toast(`Opening ${row.record.filename}`)}>
-            Open
+          <Button small variant="ghost" onClick={() => setPanel({ kind: 'link', view: row })}>
+            Add link
           </Button>
         ),
     },
@@ -101,11 +112,76 @@ export function DocumentsScreen({ rowsByFilter, counts }: DocumentsScreenProps) 
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => toast('Upload is not wired up in this build')}>
+        <Button variant="primary" onClick={() => setPanel({ kind: 'register' })}>
           <Icon name="i-upload" />
-          Upload
+          Add document
         </Button>
       </Toolbar>
+
+      {panel?.kind === 'register' ? (
+        <PanelCard>
+          <CardHeader title="Add document" aside={<Sub>Metadata only — no file is stored in this build</Sub>} />
+          <CardBody>
+            <ActionForm action={registerDocumentAction} submitLabel="Register document" onCancel={close} onSuccess={close}>
+              {({ fieldErrors }) => (
+                <FieldGrid>
+                  <TextField
+                    id="doc-filename" name="filename" label="File name" required
+                    placeholder="Rates notice 166 Compton Rd Q2 2026.pdf"
+                    invalid={Boolean(firstError(fieldErrors, 'filename'))}
+                    hint={firstError(fieldErrors, 'filename')}
+                  />
+                  <SelectField
+                    id="doc-type" name="type" label="Type" defaultValue="other"
+                    options={[
+                      { value: 'lease', label: 'Lease' },
+                      { value: 'insurance-policy', label: 'Insurance policy' },
+                      { value: 'bill', label: 'Bill' },
+                      { value: 'invoice', label: 'Invoice' },
+                      { value: 'receipt', label: 'Receipt' },
+                      { value: 'loan', label: 'Loan' },
+                      { value: 'valuation', label: 'Valuation' },
+                      { value: 'other', label: 'Other' },
+                    ]}
+                  />
+                  <SelectField
+                    id="doc-target" name="target" label="Link to"
+                    hint="Unlinked documents are flagged so they can be filed later"
+                    options={[{ value: '', label: 'Not linked' }, ...linkTargets]}
+                  />
+                  <TextField id="doc-size" name="sizeMb" label="Size (MB)" defaultValue="0.5" />
+                </FieldGrid>
+              )}
+            </ActionForm>
+          </CardBody>
+        </PanelCard>
+      ) : null}
+
+      {panel?.kind === 'link' ? (
+        <PanelCard>
+          <CardHeader title={`Link · ${panel.view.record.filename}`} aside={<Sub>Links are additive</Sub>} />
+          <CardBody>
+            <ActionForm
+              action={linkDocumentAction}
+              submitLabel="Link document"
+              onCancel={close}
+              onSuccess={close}
+              hiddenFields={{ documentId: panel.view.record.id }}
+            >
+              {({ fieldErrors }) => (
+                <FieldGrid>
+                  <SelectField
+                    id="link-target" name="target" label="Link to" required
+                    invalid={Boolean(firstError(fieldErrors, 'target'))}
+                    hint={firstError(fieldErrors, 'target')}
+                    options={[{ value: '', label: 'Choose a record…' }, ...linkTargets]}
+                  />
+                </FieldGrid>
+              )}
+            </ActionForm>
+          </CardBody>
+        </PanelCard>
+      ) : null}
 
       <Card>
         <DataTable

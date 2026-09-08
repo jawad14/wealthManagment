@@ -70,6 +70,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       componentNoun={property.rentalMode === 'by-room' ? 'Room' : 'Component'}
       valuationDetail={propertiesService.valuationDetailLabel(property.id, asOf)}
       valuationAmount={valuation.valuation?.amount ?? null}
+      propertyId={property.id}
+      today={asOf}
     />
   );
 }

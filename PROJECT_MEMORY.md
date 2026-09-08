@@ -3,8 +3,8 @@
 Running record for future sessions. Read this first; it should let you resume
 without re-deriving anything.
 
-**Last updated:** 2026-09-08 (session 3 — demonstration dataset)
-**Build status:** 110 tests ✅ · typecheck ✅ · lint ✅ · build ✅ · 21 routes live
+**Last updated:** 2026-09-08 (session 4 — write paths wired)
+**Build status:** 137 tests ✅ · typecheck ✅ · lint ✅ · build ✅ · 21 routes live
 
 ---
 
@@ -18,7 +18,7 @@ two sources of truth: `design/wealth-platform-design.html` for design and
 the FR/BR/NFR identifiers the design cites.
 **Session 2** received the requirements document and closed the gaps it exposed.
 
-Eleven feature modules, thirteen screens, twenty-one routes, 110 tests.
+Eleven feature modules, thirteen screens, twenty-one routes, 137 tests.
 
 ## 2. What the requirements document changed
 
@@ -141,9 +141,15 @@ avoiding again:
 - **NFR-02/04/05/06**: encryption, backups, availability, performance benchmarks.
 - **UAT-06**: cannot pass without persistence and backups.
 
-### Built read-only
-No create/edit forms anywhere. Service methods and Zod schemas exist; buttons
-raise a toast.
+### Write paths — now wired
+Every action button calls a Server Action. The pattern is one `actions.ts` per
+module: parse `FormData` → call the service → record an audit entry →
+`revalidatePath`. Actions **never throw across the boundary** — a thrown error
+reaches the client as an opaque digest, useless to someone filling in a form — so
+they return `ActionResult` with field-level errors instead.
+
+Still read-only: six of seven property-detail tabs, editing an existing loan, and
+editing an entity after creation.
 
 ## 6. Non-obvious things worth knowing
 
@@ -193,5 +199,6 @@ raise a toast.
 | Date | Change |
 | --- | --- |
 | 2026-09-07 | Session 1: built from the design alone. 9 modules, 10 screens, 16 API routes, full documentation. Design verified byte-identical. |
+| 2026-09-08 | Session 4: wired every action button to a Server Action (17 stubs → 0). Implemented the two failing FR-05 criteria — charge generation on lease creation, early termination removing only *unearned* charges, and effective rent changes that never restate paid history. Added `ActionForm`, `ActionResult` and `FormData` parsing helpers. 137 tests. |
 | 2026-09-08 | Session 3: filled the seed out into a demonstration dataset — every section and filter now has content. Closed five documented divergences (obligations 23, documents 142, entities 6, unlinked 2, upcoming 7 items/$9,320). Headline figures unchanged and still fixture-tested. |
 | 2026-09-07 | Session 2: requirements document received. Added `shared-bills` (FR-07) and `expenses` (FR-04); BR-06 money/date discipline; BR-03 separated reporting; BR-05 credits and reversals; FR-06 duplicate-import protection; FR-08 idempotent dispatch; FR-09 drill-down and permission-parity exports; NFR-01 server-side enforcement. 110 tests including UAT-01…07. Fixed a cash-flow chart anchoring bug the tests exposed. |

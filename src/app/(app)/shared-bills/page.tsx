@@ -4,6 +4,7 @@ import { sharedBillsService, type SharedBillFilter } from '@/modules/shared-bill
 import { propertiesService } from '@/modules/properties/service';
 import { SharedBillsScreen } from '@/modules/shared-bills/components/SharedBillsScreen';
 import type { BillAllocation } from '@/modules/shared-bills/model';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 
 export const metadata: Metadata = { title: 'Shared bills & recoveries · Holdfast' };
 
@@ -29,6 +30,7 @@ export default function SharedBillsPage() {
       totalRecovered={sumMoney(all.map((entry) => entry.recovered))}
       totalOwnerExpense={sumMoney(all.map((entry) => entry.ownerExpense))}
       propertyNames={propertyNames}
+      today={resolveAsOfDate()}
     />
   );
 }

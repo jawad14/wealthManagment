@@ -3,6 +3,7 @@ import { resolveAsOfDate } from '@/shared/config/app-config';
 import { propertiesService, type PropertyFilter } from '@/modules/properties/service';
 import { loansService } from '@/modules/loans/service';
 import { leasesService } from '@/modules/leases/service';
+import { entitiesService } from '@/modules/entities/service';
 import { PropertiesScreen } from '@/modules/properties/components/PropertiesScreen';
 import type { PropertyCardProps } from '@/modules/properties/components/PropertyCard';
 import type { Property } from '@/modules/properties/model';
@@ -71,5 +72,12 @@ export default function PropertiesPage() {
     {} as Record<PropertyFilter, readonly PropertyCardProps[]>,
   );
 
-  return <PropertiesScreen cardsByFilter={cardsByFilter} counts={propertiesService.counts(asOf)} />;
+  return (
+    <PropertiesScreen
+      cardsByFilter={cardsByFilter}
+      counts={propertiesService.counts(asOf)}
+      today={asOf}
+      entities={entitiesService.listEntities().map((entity) => ({ id: entity.id, name: entity.name }))}
+    />
+  );
 }

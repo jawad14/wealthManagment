@@ -2,12 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { Banner } from '@/shared/components/Banner';
-import { Button } from '@/shared/components/Button';
 import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
-import { Row, Sub } from '@/shared/components/Layout';
-import { useToast } from '@/shared/shell/ToastContext';
+import { Sub } from '@/shared/components/Layout';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { formatDateLong } from '@/shared/lib/dates';
+import { createLeaseAction } from '../actions';
 import type { RentFrequency } from '../model';
 
 export interface NewLeaseFormProps {
@@ -26,6 +26,11 @@ export interface NewLeaseFormProps {
     readonly bondHandling: boolean;
     readonly proration: boolean;
   };
+  /** Where the lease can be attached, and who can take it. */
+  readonly propertyId: string;
+  readonly componentId: string | null;
+  readonly tenants: readonly { readonly id: string; readonly name: string }[];
+  readonly onClose?: () => void;
 }
 
 const FREQUENCY_OPTIONS: readonly { value: RentFrequency; label: string }[] = [
@@ -63,8 +68,11 @@ export function NewLeaseForm({
   defaultRent,
   defaultBond,
   pendingPolicies,
+  propertyId,
+  componentId,
+  tenants,
+  onClose,
 }: NewLeaseFormProps) {
-  const { toast } = useToast();
   const [startsOn, setStartsOn] = useState(defaultStartsOn);
   const [endsOn, setEndsOn] = useState(defaultEndsOn);
   const [frequency, setFrequency] = useState<RentFrequency>('weekly');
@@ -74,60 +82,83 @@ export function NewLeaseForm({
   return (
     <Card>
       <CardHeader title="New lease" aside={<Sub>{targetLabel}</Sub>} />
-      <CardBody className="stack">
-        <FieldGrid>
-          <TextField id="f1" label="Tenant" placeholder="Search or add tenant" />
-          <TextField
-            id="f2"
-            label="Billing reference"
-            defaultValue={suggestedReference}
-            hint="Tenants put this on their transfer so receipts auto-match"
-          />
-          <TextField id="f3" label="Start date" type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
-          <TextField id="f4" label="End date" type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
-          <TextField id="f5" label="Rent" defaultValue={defaultRent} />
-          <SelectField
-            id="f6"
-            label="Frequency"
-            value={frequency}
-            onChange={(e) => setFrequency(e.target.value as RentFrequency)}
-            options={FREQUENCY_OPTIONS}
-          />
-          <TextField
-            id="f7"
-            label="Bond"
-            defaultValue={defaultBond}
-            invalid={pendingPolicies.bondHandling}
-            hint={
-              pendingPolicies.bondHandling
-                ? 'Bond handling policy not yet approved — record only, no charge generated'
-                : 'Held per the approved bond policy'
-            }
-          />
-          <SelectField
-            id="f8"
-            label="Reminders"
-            options={[
-              { value: 'on', label: 'On — in-app + email, 3 days before due' },
-              { value: 'off', label: 'Off' },
-            ]}
-          />
-        </FieldGrid>
-
-        <Banner tone="info" icon="i-clock" title={`${chargeCount} expected charges will be created`}>
-          {FREQUENCY_OPTIONS.find((option) => option.value === frequency)?.label} from {formatDateLong(startsOn)} to{' '}
-          {formatDateLong(endsOn)}.
-          {pendingPolicies.proration
-            ? ' First partial week not prorated — proration rule awaiting approval.'
-            : ''}
-        </Banner>
-
-        <Row>
-          <Button variant="primary" onClick={() => toast('Lease creation is not wired up in this build')}>
-            Create lease
-          </Button>
-          <Button variant="ghost">Cancel</Button>
-        </Row>
+      <CardBody>
+        <ActionForm
+          action={createLeaseAction}
+          submitLabel="Create lease"
+          onCancel={onClose}
+          onSuccess={onClose}
+          hiddenFields={{
+            propertyId,
+            ...(componentId ? { componentId } : {}),
+            chargeAnchorOn: startsOn,
+          }}
+          footnote={
+            <Banner tone="info" icon="i-clock" title={`${chargeCount} expected charges will be created`}>
+              {FREQUENCY_OPTIONS.find((option) => option.value === frequency)?.label} from {formatDateLong(startsOn)} to{' '}
+              {formatDateLong(endsOn)}.
+              {pendingPolicies.proration
+                ? ' First partial period not prorated — proration rule awaiting approval.'
+                : ''}
+            </Banner>
+          }
+        >
+          {({ fieldErrors }) => (
+            <FieldGrid>
+              <SelectField
+                id="f0" name="tenantId" label="Existing tenant"
+                options={[{ value: '', label: 'New tenant…' }, ...tenants.map((t) => ({ value: t.id, label: t.name }))]}
+              />
+              <TextField
+                id="f1" name="tenantName" label="New tenant name" placeholder="A. Nguyen"
+                invalid={Boolean(firstError(fieldErrors, 'tenantName'))}
+                hint={firstError(fieldErrors, 'tenantName') ?? 'Leave blank if choosing an existing tenant'}
+              />
+              <TextField
+                id="f2" name="reference" label="Billing reference" required
+                defaultValue={suggestedReference}
+                hint="Tenants put this on their transfer so receipts auto-match"
+              />
+              <SelectField
+                id="f6" name="frequency" label="Frequency"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as RentFrequency)}
+                options={FREQUENCY_OPTIONS}
+              />
+              <TextField
+                id="f3" name="startsOn" label="Start date" type="date"
+                value={startsOn} onChange={(e) => setStartsOn(e.target.value)} required
+              />
+              <TextField
+                id="f4" name="endsOn" label="End date" type="date"
+                value={endsOn} onChange={(e) => setEndsOn(e.target.value)} required
+                invalid={Boolean(firstError(fieldErrors, 'endsOn'))}
+                hint={firstError(fieldErrors, 'endsOn')}
+              />
+              <TextField
+                id="f5" name="rent" label="Rent" required defaultValue={defaultRent.replace(/[$,]/g, '')}
+                invalid={Boolean(firstError(fieldErrors, 'rent'))}
+                hint={firstError(fieldErrors, 'rent')}
+              />
+              <TextField
+                id="f7" name="bond" label="Bond" defaultValue={defaultBond.replace(/[$,]/g, '')}
+                invalid={pendingPolicies.bondHandling}
+                hint={
+                  pendingPolicies.bondHandling
+                    ? 'Bond handling policy not yet approved — recorded only, no charge generated'
+                    : 'Held per the approved bond policy'
+                }
+              />
+              <SelectField
+                id="f8" name="reminders" label="Reminders" defaultValue="on"
+                options={[
+                  { value: 'on', label: 'On — in-app + email' },
+                  { value: 'off', label: 'Off' },
+                ]}
+              />
+            </FieldGrid>
+          )}
+        </ActionForm>
       </CardBody>
     </Card>
   );

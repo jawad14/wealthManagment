@@ -23,6 +23,7 @@ export const propertiesRepository = {
       (a, b) => b.valuedOn.localeCompare(a.valuedOn),
     )[0],
 
+  insert: (property: Property): Property => properties.insert(property),
   addValuation: (valuation: Valuation): Valuation => valuations.insert(valuation),
 
   listComponents: (propertyId: PropertyId): readonly PropertyComponent[] =>

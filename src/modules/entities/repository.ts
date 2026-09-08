@@ -22,6 +22,12 @@ function isEffective(relationship: Relationship, asOf: IsoDate): boolean {
 
 export const entitiesRepository = {
   listEntities: (): readonly Entity[] => entities.list(),
+  insertEntity: (entity: Entity): Entity => entities.insert(entity),
+  /** Guards BR-02 before the relationship reaches storage. */
+  insertRelationship: (relationship: Relationship): Relationship => {
+    assertShareIntegrity(relationship);
+    return relationships.insert(relationship);
+  },
   findEntity: (id: EntityId): Entity | undefined => entities.find(id),
   listRelationships: (): readonly Relationship[] => relationships.list(),
 

@@ -24,6 +24,10 @@ export const sharedBillsRepository = {
       b.effectiveFrom.localeCompare(a.effectiveFrom),
     ),
 
+  insert: (bill: SharedBill): SharedBill => bills.insert(bill),
+  update: (id: string, changes: Partial<Omit<SharedBill, 'id'>>): SharedBill | undefined =>
+    bills.update(id, changes),
+
   listShares: (billId: string): readonly BillShare[] => shares.where((share) => share.billId === billId),
   updateShare: (id: string, changes: Partial<Omit<BillShare, 'id'>>): BillShare | undefined =>
     shares.update(id, changes),

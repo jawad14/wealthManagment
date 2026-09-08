@@ -6,16 +6,21 @@ import { Button } from '@/shared/components/Button';
 import { Confidence } from '@/shared/components/Confidence';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { Row } from '@/shared/components/Layout';
+import { ActionForm } from '@/shared/components/ActionForm';
 import { formatMoney } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
+import {
+  confirmAllHighConfidenceAction,
+  confirmTransactionAction,
+  leaveUnmatchedAction,
+} from '../actions';
 import type { StagedTransaction } from '../model';
 
 export interface StagedTransactionsTableProps {
   readonly rows: readonly StagedTransaction[];
   readonly highConfidenceCount: number;
-  readonly onConfirm: (transaction: StagedTransaction) => void;
-  readonly onChange: (transaction: StagedTransaction) => void;
-  readonly onConfirmAll: () => void;
+  /** Opens the allocation panel for a row the matcher could not place. */
+  readonly onAllocate: (transaction: StagedTransaction) => void;
 }
 
 /**
@@ -28,9 +33,7 @@ export interface StagedTransactionsTableProps {
 export function StagedTransactionsTable({
   rows,
   highConfidenceCount,
-  onConfirm,
-  onChange,
-  onConfirmAll,
+  onAllocate,
 }: StagedTransactionsTableProps) {
   const columns: readonly DataTableColumn<StagedTransaction>[] = [
     { header: 'Date', render: (row) => formatDateShort(row.date) },
@@ -84,36 +87,33 @@ export function StagedTransactionsTable({
       header: 'Action',
       render: (row) => {
         if (row.state === 'confirmed') return <span className="sub">Ready to post</span>;
-        if (row.state === 'unmatched') {
+
+        if (row.state === 'unmatched' || row.state === 'needs-review') {
           return (
             <Row style={{ gap: 6 }}>
-              <Button small onClick={() => onChange(row)}>
-                Allocate
+              <Button small onClick={() => onAllocate(row)}>
+                {row.state === 'unmatched' ? 'Allocate' : 'Choose property'}
               </Button>
-              <Button small variant="ghost" onClick={() => onChange(row)}>
-                Leave unmatched
-              </Button>
+              <ActionForm
+                action={leaveUnmatchedAction}
+                submitLabel="Leave unmatched"
+                render="inline"
+                hiddenFields={{ transactionId: row.id }}
+              />
             </Row>
           );
         }
-        if (row.state === 'needs-review') {
-          return (
-            <Row style={{ gap: 6 }}>
-              <Button small onClick={() => onChange(row)}>
-                Choose property
-              </Button>
-              <Button small variant="ghost" onClick={() => onChange(row)}>
-                Leave unmatched
-              </Button>
-            </Row>
-          );
-        }
+
         return (
           <Row style={{ gap: 6 }}>
-            <Button small variant="gold" onClick={() => onConfirm(row)}>
-              Confirm
-            </Button>
-            <Button small variant="ghost" onClick={() => onChange(row)}>
+            <ActionForm
+              action={confirmTransactionAction}
+              submitLabel="Confirm"
+              render="inline"
+              submitVariant="gold"
+              hiddenFields={{ transactionId: row.id }}
+            />
+            <Button small variant="ghost" onClick={() => onAllocate(row)}>
               Change
             </Button>
           </Row>
@@ -128,12 +128,12 @@ export function StagedTransactionsTable({
         title="Staged transactions"
         aside={
           <Row>
-            <Button small onClick={onConfirmAll}>
-              Confirm all high-confidence ({highConfidenceCount})
-            </Button>
-            <Button small variant="ghost">
-              Filter
-            </Button>
+            <ActionForm
+              action={confirmAllHighConfidenceAction}
+              submitLabel={`Confirm all high-confidence (${highConfidenceCount})`}
+              render="inline"
+              submitVariant="default"
+            />
           </Row>
         }
       />
