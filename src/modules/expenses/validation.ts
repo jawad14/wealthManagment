@@ -24,6 +24,7 @@ export const expenseQuerySchema = z.object({
   to: isoDate.optional(),
   propertyId: z.string().min(1).optional(),
   entityId: z.string().min(1).optional(),
+  loanId: z.string().min(1).optional(),
   category: expenseCategorySchema.optional(),
 });
 
@@ -40,6 +41,7 @@ export const createExpenseSchema = z.object({
   propertyId: z.string().min(1).optional(),
   leaseId: z.string().min(1).optional(),
   obligationId: z.string().min(1).optional(),
+  loanId: z.string().min(1).optional(),
   evidenceDocumentIds: z.array(z.string().min(1)).default([]),
 });
 

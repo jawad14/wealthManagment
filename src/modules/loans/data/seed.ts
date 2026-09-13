@@ -14,7 +14,7 @@ export const LOAN_IDS = {
   macquarie4417: asId<'Loan'>('loan-macq-4417'),
   cba8820: asId<'Loan'>('loan-cba-8820'),
   anz3305: asId<'Loan'>('loan-anz-3305'),
-  khalidReceivable: asId<'Loan'>('loan-khalid-receivable'),
+  devlinReceivable: asId<'Loan'>('loan-devlin-receivable'),
 };
 
 export function seedLoans(): readonly Loan[] {
@@ -24,8 +24,8 @@ export function seedLoans(): readonly Loan[] {
       lender: 'Macquarie',
       facilityName: 'Home loan 4417',
       direction: 'liability',
-      counterpartyLabel: 'Jawad & Mahvish',
-      borrowerEntityIds: [ENTITY_IDS.jawad, ENTITY_IDS.mahvish],
+      counterpartyLabel: 'Adam & Nadia',
+      borrowerEntityIds: [ENTITY_IDS.adam, ENTITY_IDS.nadia],
       balance: fromMajorUnits(612_400),
       balanceAsOf: '2026-08-31',
       rate: { annual: 0.0589, type: 'fixed', fixedUntil: '2026-09-30' },
@@ -35,7 +35,7 @@ export function seedLoans(): readonly Loan[] {
         interestComponent: fromMajorUnits(3_006),
         principalComponent: fromMajorUnits(854),
       },
-      security: { kind: 'single', propertyIds: [PROPERTY_IDS.watsonRd], label: 'Watson Rd' },
+      security: { kind: 'single', propertyIds: [PROPERTY_IDS.calderRd], label: 'Calder Rd' },
       rateReviewOn: '2026-09-30',
     },
     {
@@ -44,8 +44,8 @@ export function seedLoans(): readonly Loan[] {
       facilityName: 'Investment loan 8820',
       facilityNote: 'Cross-collateralised',
       direction: 'liability',
-      counterpartyLabel: 'Esteem Development Pty Ltd',
-      borrowerEntityIds: [ENTITY_IDS.esteem],
+      counterpartyLabel: 'Northgate Holdings Pty Ltd',
+      borrowerEntityIds: [ENTITY_IDS.northgate],
       balance: fromMajorUnits(1_184_000),
       balanceAsOf: '2026-08-31',
       rate: { annual: 0.0634, type: 'variable' },
@@ -57,8 +57,8 @@ export function seedLoans(): readonly Loan[] {
       },
       security: {
         kind: 'pool',
-        propertyIds: [PROPERTY_IDS.comptonRd, PROPERTY_IDS.bentonSt],
-        label: 'Compton Rd + Benton St',
+        propertyIds: [PROPERTY_IDS.harlowRd, PROPERTY_IDS.marlinSt],
+        label: 'Harlow Rd + Marlin St',
       },
       // Present but not approved: it may inform the working per-property figure
       // the property cards show, and must not drive a published LVR.
@@ -73,7 +73,7 @@ export function seedLoans(): readonly Loan[] {
       lender: 'ANZ',
       facilityName: 'Investment loan 3305',
       direction: 'liability',
-      counterpartyLabel: 'Siddique Family Trust',
+      counterpartyLabel: 'Whitfield Family Trust',
       borrowerEntityIds: [ENTITY_IDS.familyTrust],
       balance: fromMajorUnits(410_300),
       balanceAsOf: '2026-08-15',
@@ -84,17 +84,17 @@ export function seedLoans(): readonly Loan[] {
         interestComponent: fromMajorUnits(1_830),
         principalComponent: fromMajorUnits(0),
       },
-      security: { kind: 'single', propertyIds: [PROPERTY_IDS.miansRd], label: 'Mians Rd' },
+      security: { kind: 'single', propertyIds: [PROPERTY_IDS.vernonRd], label: 'Vernon Rd' },
     },
     {
       // FR-11: money lent out. An asset, never part of debt and never an expense.
-      id: LOAN_IDS.khalidReceivable,
-      lender: 'Personal loan · to S. Khalid',
-      facilityName: 'Personal loan · to S. Khalid',
+      id: LOAN_IDS.devlinReceivable,
+      lender: 'Personal loan · to M. Devlin',
+      facilityName: 'Personal loan · to M. Devlin',
       facilityNote: 'Receivable, not an expense (FR-11)',
       direction: 'receivable',
-      counterpartyLabel: 'Jawad (lender)',
-      borrowerEntityIds: [ENTITY_IDS.jawad],
+      counterpartyLabel: 'Adam (lender)',
+      borrowerEntityIds: [ENTITY_IDS.adam],
       balance: fromMajorUnits(120_000),
       balanceAsOf: '2026-09-01',
       rate: { annual: 0.04, type: 'fixed' },

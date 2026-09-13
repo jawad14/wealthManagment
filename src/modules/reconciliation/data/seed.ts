@@ -45,7 +45,7 @@ function featuredTransactions(): StagedTransaction[] {
         detail: 'Partial payment · $200 remains',
         confidence: 0.94,
         targetRef: 'chg-nguyen-0825',
-        propertyId: PROPERTY_IDS.comptonRd,
+        propertyId: PROPERTY_IDS.harlowRd,
       },
       state: 'auto-matched',
     },
@@ -58,11 +58,11 @@ function featuredTransactions(): StagedTransaction[] {
       amount: fromMajorUnits(-412),
       suggestion: {
         kind: 'expense',
-        label: 'Water usage · 166 Compton Rd',
+        label: 'Water usage · 14 Harlow Rd',
         detail: 'Split 60/40 to Rooms 1–3 and 4–6 per agreement',
         confidence: 0.88,
         targetRef: 'obl-water-usage',
-        propertyId: PROPERTY_IDS.comptonRd,
+        propertyId: PROPERTY_IDS.harlowRd,
       },
       state: 'auto-matched',
     },
@@ -75,7 +75,7 @@ function featuredTransactions(): StagedTransaction[] {
       amount: fromMajorUnits(-5_000),
       suggestion: {
         kind: 'transfer',
-        label: 'Internal transfer · Esteem Dev offset',
+        label: 'Internal transfer · Northgate offset',
         detail: 'Excluded from income and expenses',
         confidence: 0.97,
         excludedFromCashFlow: true,
@@ -145,7 +145,7 @@ function routineTransactions(): StagedTransaction[] {
           detail: 'Full payment · charge settled',
           confidence: 0.96,
           targetRef: run.ref,
-          propertyId: PROPERTY_IDS.comptonRd,
+          propertyId: PROPERTY_IDS.harlowRd,
         },
         state: 'auto-matched',
       });
@@ -155,14 +155,14 @@ function routineTransactions(): StagedTransaction[] {
   // Recurring debits the matcher recognises from prior periods.
   const debits = [
     { suffix: 'insurance-0805', date: '2026-08-05', description: 'TERRI SCHEER INSURANCE', amount: -142.5, label: 'Landlord insurance · monthly instalment' },
-    { suffix: 'council-0812', date: '2026-08-12', description: 'BRISBANE CITY COUNCIL', amount: -311.25, label: 'Council rates · 20 Benton St' },
-    { suffix: 'agent-0815', date: '2026-08-15', description: 'PROPERTY AGENT FEE', amount: -418.0, label: 'Management fee · 20 Benton St' },
+    { suffix: 'council-0812', date: '2026-08-12', description: 'BRISBANE CITY COUNCIL', amount: -311.25, label: 'Council rates · 8 Marlin St' },
+    { suffix: 'agent-0815', date: '2026-08-15', description: 'PROPERTY AGENT FEE', amount: -418.0, label: 'Management fee · 8 Marlin St' },
     { suffix: 'loan-macq-0801', date: '2026-08-01', description: 'MACQUARIE LOAN 4417', amount: -3_860, label: 'Loan repayment · Macquarie 4417' },
     { suffix: 'loan-cba-0801', date: '2026-08-01', description: 'CBA LOAN 8820', amount: -6_250, label: 'Loan repayment · CBA 8820' },
     { suffix: 'loan-anz-0815', date: '2026-08-15', description: 'ANZ LOAN 3305', amount: -1_830, label: 'Loan repayment · ANZ 3305' },
-    { suffix: 'electricity-0818', date: '2026-08-18', description: 'ENERGEX RETAIL 7741', amount: -186.4, label: 'Electricity · 166 Compton Rd common areas' },
+    { suffix: 'electricity-0818', date: '2026-08-18', description: 'ENERGEX RETAIL 7741', amount: -186.4, label: 'Electricity · 14 Harlow Rd common areas' },
     { suffix: 'smoke-0820', date: '2026-08-20', description: 'SMOKE ALARM SOLUTIONS', amount: -99.0, label: 'Compliance service · annual' },
-    { suffix: 'strata-0826', date: '2026-08-26', description: 'STRATA MGMT WATSON', amount: -373.33, label: 'Body corporate levy · Watson Rd' },
+    { suffix: 'strata-0826', date: '2026-08-26', description: 'STRATA MGMT CALDER', amount: -373.33, label: 'Body corporate levy · Calder Rd' },
   ];
   debits.forEach((debit) => {
     rows.push({

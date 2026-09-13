@@ -73,7 +73,7 @@ describe('FR-06 / UAT-02 · reconciliation', () => {
       chargeId: NGUYEN_CHARGE,
       amount: fromMajorUnits(200),
       appliedOn: '2026-09-03',
-      approvedBy: USER_IDS.jawad,
+      approvedBy: USER_IDS.adam,
       note: 'Agreed adjustment for the repair delay',
     });
 
@@ -93,11 +93,11 @@ describe('FR-06 / UAT-02 · reconciliation', () => {
 
   it('does not count future rent as arrears (BR-05)', () => {
     // Evaluated before the charge falls due, nothing is owing.
-    const early = leasesService.arrearsFor(LEASE_IDS.patelBenton, '2026-08-01');
+    const early = leasesService.arrearsFor(LEASE_IDS.patelMarlin, '2026-08-01');
     expect(early.due.cents).toBe(0);
     expect(early.outstanding.cents).toBe(0);
 
-    const later = leasesService.arrearsFor(LEASE_IDS.patelBenton, AS_OF);
+    const later = leasesService.arrearsFor(LEASE_IDS.patelMarlin, AS_OF);
     expect(later.due.cents).toBeGreaterThan(0);
   });
 
@@ -122,7 +122,7 @@ describe('FR-06 / UAT-02 · reconciliation', () => {
         chargeId: NGUYEN_CHARGE,
         amount: fromMajorUnits(50),
         appliedOn: '2026-09-03',
-        approvedBy: USER_IDS.jawad,
+        approvedBy: USER_IDS.adam,
         note: '  ',
       }),
     ).toThrow(ValidationError);

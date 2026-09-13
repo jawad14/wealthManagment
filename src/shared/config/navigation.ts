@@ -17,7 +17,9 @@ export type ViewKey =
   | 'entities'
   | 'documents'
   | 'access'
-  | 'design-system';
+  | 'design-system'
+  | 'how-it-works'
+  | 'mind-map';
 
 export interface NavItem {
   readonly key: ViewKey;
@@ -50,6 +52,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'documents', href: '/documents', label: 'Documents', icon: 'i-file', group: 'Records' },
   { key: 'access', href: '/access', label: 'Access & audit', icon: 'i-shield', group: 'Admin' },
   { key: 'design-system', href: '/design-system', label: 'Design system', icon: 'i-palette', group: 'Admin' },
+  { key: 'how-it-works', href: '/how-it-works', label: 'How it works', icon: 'i-search', group: 'Admin' },
+  { key: 'mind-map', href: '/mind-map', label: 'Mind map', icon: 'i-grid', group: 'Admin' },
 ];
 
 /** Page titles shown in the top bar, keyed by view. */
@@ -66,6 +70,8 @@ export const VIEW_TITLES: Record<ViewKey, string> = {
   documents: 'Documents',
   access: 'Access & audit',
   'design-system': 'Design system',
+  'how-it-works': 'How it works',
+  'mind-map': 'Mind map',
 };
 
 /** The five bottom-bar destinations on mobile. `menu` opens the drawer. */
@@ -103,6 +109,8 @@ export const TAB_FOR_VIEW: Record<ViewKey, TabKey> = {
   documents: 'menu',
   access: 'menu',
   'design-system': 'menu',
+  'how-it-works': 'menu',
+  'mind-map': 'menu',
 };
 
 /** Resolve the active view from a pathname. Defaults to the dashboard. */

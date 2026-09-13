@@ -42,7 +42,7 @@ describe('FR-07 · bill allocation', () => {
   });
 
   it('refuses to split when the governing agreement is not approved', () => {
-    const allocation = sharedBillsService.allocate(BILL_IDS.bentonWaterJul);
+    const allocation = sharedBillsService.allocate(BILL_IDS.marlinWaterJul);
 
     expect(allocation.rejection).toBe('agreement-not-approved');
     expect(allocation.shares).toHaveLength(0);

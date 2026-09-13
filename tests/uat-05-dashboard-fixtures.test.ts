@@ -19,12 +19,12 @@ const asOf = resolveAsOfDate();
 /** Hand-calculated from the seed files, in cents. */
 const FIXTURE = {
   // Property valuations at the owning entity's share.
-  comptonRd: 118_000_000, // Family Trust 100%
-  bentonSt: 94_000_000, // Esteem 100%
-  watsonRd: 105_200_000, // Jawad 50% + Mahvish 50%
-  miansRd: 76_000_000, // Family Trust 100%
-  loganReserve: 31_800_000, // Esteem 100%
-  receivable: 12_000_000, // S. Khalid loan (FR-11: an asset)
+  harlowRd: 118_000_000, // Family Trust 100%
+  marlinSt: 94_000_000, // Northgate 100%
+  calderRd: 105_200_000, // Adam 50% + Nadia 50%
+  vernonRd: 76_000_000, // Family Trust 100%
+  fairmontReserve: 31_800_000, // Northgate 100%
+  receivable: 12_000_000, // M. Devlin loan (FR-11: an asset)
 
   // Liabilities.
   macquarie: 61_240_000,
@@ -40,11 +40,11 @@ const FIXTURE = {
 } as const;
 
 const EXPECTED_ASSETS =
-  FIXTURE.comptonRd +
-  FIXTURE.bentonSt +
-  FIXTURE.watsonRd +
-  FIXTURE.miansRd +
-  FIXTURE.loganReserve +
+  FIXTURE.harlowRd +
+  FIXTURE.marlinSt +
+  FIXTURE.calderRd +
+  FIXTURE.vernonRd +
+  FIXTURE.fairmontReserve +
   FIXTURE.receivable;
 
 const EXPECTED_LIABILITIES = FIXTURE.macquarie + FIXTURE.cba + FIXTURE.anz;

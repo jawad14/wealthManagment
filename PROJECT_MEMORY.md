@@ -3,8 +3,8 @@
 Running record for future sessions. Read this first; it should let you resume
 without re-deriving anything.
 
-**Last updated:** 2026-09-08 (session 4 — write paths wired)
-**Build status:** 137 tests ✅ · typecheck ✅ · lint ✅ · build ✅ · 21 routes live
+**Last updated:** 2026-09-10 (session 5 — guide screens, expense→loan link, seed anonymised)
+**Build status:** 141 tests ✅ · typecheck ✅ · lint ✅ · build ✅ · 23 routes live
 
 ---
 
@@ -103,7 +103,7 @@ so a failure there means *update the fixture consciously*, not patch the test.
 Two mistakes made while building this dataset, both caught by tests, both worth
 avoiding again:
 
-- A "historical" Mians Rd valuation was dated **after** the 2023 purchase price it
+- A "historical" Vernon Rd valuation was dated **after** the 2023 purchase price it
   was meant to precede, so `latestValuation` silently picked it up and assets fell
   by $25,000. Valuation history must be dated before the current record.
 - Electricity bills were pointed at the 60/40 **water** agreement, whose effective
@@ -198,6 +198,7 @@ editing an entity after creation.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-10 | Session 5: added `/how-it-works` and `/mind-map` — two reference screens for testers (where each fact is recorded, the rules, entry order, what joins to what, and the gaps that are not defects). **Closed the expense→loan gap:** `ExpenseAllocation.loanId`, a Loan field on the expense form, a facility line in the detail panel, a `loanId` query filter, and 4 tests — one of which reconciles booked interest against the facility's own `interestComponent`, which is the drift the link exists to catch. **Anonymised the whole seed:** every real person, entity, business and property address replaced with fictional equivalents across 39 files including tests, docs and the design prototype. Headline figures unchanged — only names and ids moved. |
 | 2026-09-07 | Session 1: built from the design alone. 9 modules, 10 screens, 16 API routes, full documentation. Design verified byte-identical. |
 | 2026-09-08 | Session 4: wired every action button to a Server Action (17 stubs → 0). Implemented the two failing FR-05 criteria — charge generation on lease creation, early termination removing only *unearned* charges, and effective rent changes that never restate paid history. Added `ActionForm`, `ActionResult` and `FormData` parsing helpers. 137 tests. |
 | 2026-09-08 | Session 3: filled the seed out into a demonstration dataset — every section and filter now has content. Closed five documented divergences (obligations 23, documents 142, entities 6, unlinked 2, upcoming 7 items/$9,320). Headline figures unchanged and still fixture-tested. |

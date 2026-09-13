@@ -38,7 +38,7 @@ link to relationships by id only.
 | Acceptance criterion | Status |
 | --- | --- |
 | A property with six rooms appears once in consolidated asset value | ✅ `tests/uat-01-consolidation.test.ts` |
-| Partial ownership is reflected | ✅ Watson Rd 50/50 |
+| Partial ownership is reflected | ✅ Calder Rd 50/50 |
 | The valuation date is displayed | ✅ on every card and in drill-down |
 | Stale valuations flagged | ✅ `tests/uat-07-data-quality.test.ts` |
 

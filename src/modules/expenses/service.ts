@@ -8,7 +8,7 @@
  */
 import { NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { sumMoney, type Money } from '@/shared/lib/money';
-import type { DocumentId, EntityId, IsoDate, PropertyId, UserId } from '@/shared/types/common';
+import type { DocumentId, EntityId, IsoDate, LoanId, PropertyId, UserId } from '@/shared/types/common';
 import { accessService } from '@/modules/access/service';
 import { expensesRepository } from './repository';
 import {
@@ -30,6 +30,8 @@ export interface ExpenseQueryOptions {
   readonly propertyId?: PropertyId;
   readonly entityId?: EntityId;
   readonly category?: ExpenseCategory;
+  /** Narrow to one facility — what makes interest reconcilable against a loan. */
+  readonly loanId?: LoanId;
   /** Voided expenses are excluded unless explicitly requested. */
   readonly includeVoided?: boolean;
 }
@@ -41,6 +43,7 @@ function matchesQuery(expense: Expense, options: ExpenseQueryOptions): boolean {
   if (options.to && current.effectiveOn > options.to) return false;
   if (options.propertyId && current.allocation.propertyId !== options.propertyId) return false;
   if (options.entityId && current.allocation.entityId !== options.entityId) return false;
+  if (options.loanId && current.allocation.loanId !== options.loanId) return false;
   if (options.category && current.category !== options.category) return false;
   return true;
 }

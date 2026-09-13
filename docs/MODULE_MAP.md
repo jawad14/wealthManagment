@@ -13,7 +13,7 @@ code.
 | `loans` | `Loan`, `Repayment`, `LoanSecurity`, `DebtAllocationPolicy` | FR-03, FR-11, BR-04 | `properties`, `entities` | `/loans` |
 | `leases` | `Tenant`, `Lease`, `RentCharge`, `RentAllocation` | FR-05, BR-05 | `properties` | `/leases` |
 | `shared-bills` | `SharedBill`, `AllocationAgreement`, `BillShare` | FR-07 | `properties`, `leases` | `/shared-bills` |
-| `expenses` | `Expense`, `ExpenseRevision`, `ExpenseAllocation` | FR-04 | `access`, `entities`, `properties` | `/expenses` |
+| `expenses` | `Expense`, `ExpenseRevision`, `ExpenseAllocation` | FR-04 | `access`, `entities`, `properties`, `loans` | `/expenses` |
 | `obligations` | `Obligation`, `ReminderPolicy`, `ReminderEvent` | FR-03, FR-08 | `access` | `/obligations` |
 | `reconciliation` | `BankImport`, `StagedTransaction`, `PostedCashFlowMonth` | FR-06, BR-03 | `access` | `/bank-import` |
 | `documents` | `DocumentRecord`, `DocumentVersion`, `DocumentLink` | FR-04 | `access` | `/documents` |
@@ -43,6 +43,7 @@ code.
 | A shared bill's 60/40 split | `shared-bills` |
 | Whether a cost is recoverable or the owner's | `shared-bills` (`recovered` vs `ownerExpense`) |
 | Expense corrections and their history | `expenses` (append-only `revisions`) |
+| Interest booked against a facility | `expenses` (`allocation.loanId`) |
 | What sits behind a headline total | `dashboard/explain.ts` (FR-09 drill-down) |
 | Permission-filtered CSV export | `dashboard/exports.ts` |
 | Reminder idempotency | `obligations` (`buildDispatchKey`) |

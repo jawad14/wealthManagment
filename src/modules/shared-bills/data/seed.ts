@@ -2,7 +2,7 @@
  * Seeded shared bills and allocation agreements.
  *
  * The Urban Utilities bill reproduces the design prototype's example: a water
- * bill split 60/40 across the two room groups at 166 Compton Rd, with the
+ * bill split 60/40 across the two room groups at 14 Harlow Rd, with the
  * agreement attached. The audit log in the design records this split being
  * changed from 50/50 to 60/40, so the superseded agreement is seeded too.
  */
@@ -13,24 +13,24 @@ import { LEASE_IDS } from '@/modules/leases/data/seed';
 import type { AllocationAgreement, BillShare, SharedBill } from '../model';
 
 export const AGREEMENT_IDS = {
-  comptonWater5050: 'agr-compton-water-50-50',
-  comptonWater6040: 'agr-compton-water-60-40',
-  bentonWater: 'agr-benton-water',
-  comptonElectricity: 'agr-compton-electricity',
+  harlowWater5050: 'agr-harlow-water-50-50',
+  harlowWater6040: 'agr-harlow-water-60-40',
+  marlinWater: 'agr-marlin-water',
+  harlowElectricity: 'agr-harlow-electricity',
 };
 
 export const BILL_IDS = {
   urbanUtilitiesAug: 'bill-urban-utilities-4471',
   energexAug: 'bill-energex-7741',
-  bentonWaterJul: 'bill-benton-water-jul',
+  marlinWaterJul: 'bill-marlin-water-jul',
 };
 
 export function seedAgreements(): readonly AllocationAgreement[] {
   return [
     {
       // Superseded on 5 Sep — kept, because history must remain inspectable.
-      id: AGREEMENT_IDS.comptonWater5050,
-      propertyId: PROPERTY_IDS.comptonRd,
+      id: AGREEMENT_IDS.harlowWater5050,
+      propertyId: PROPERTY_IDS.harlowRd,
       basis: 'percentage',
       description: '50/50 to Rooms 1–3 and Rooms 4–6',
       approved: true,
@@ -39,8 +39,8 @@ export function seedAgreements(): readonly AllocationAgreement[] {
       effectiveTo: '2026-06-30',
     },
     {
-      id: AGREEMENT_IDS.comptonWater6040,
-      propertyId: PROPERTY_IDS.comptonRd,
+      id: AGREEMENT_IDS.harlowWater6040,
+      propertyId: PROPERTY_IDS.harlowRd,
       basis: 'percentage',
       description: '60/40 to Rooms 1–3 and Rooms 4–6 per agreement',
       approved: true,
@@ -52,8 +52,8 @@ export function seedAgreements(): readonly AllocationAgreement[] {
     {
       // Common-area power is the owner's cost and always has been, so this one
       // stands apart from the room-group water split.
-      id: AGREEMENT_IDS.comptonElectricity,
-      propertyId: PROPERTY_IDS.comptonRd,
+      id: AGREEMENT_IDS.harlowElectricity,
+      propertyId: PROPERTY_IDS.harlowRd,
       basis: 'percentage',
       description: '100% owner · common areas',
       approved: true,
@@ -63,8 +63,8 @@ export function seedAgreements(): readonly AllocationAgreement[] {
     },
     {
       // Present but unapproved — demonstrates a bill that cannot be split yet.
-      id: AGREEMENT_IDS.bentonWater,
-      propertyId: PROPERTY_IDS.bentonSt,
+      id: AGREEMENT_IDS.marlinWater,
+      propertyId: PROPERTY_IDS.marlinSt,
       basis: 'percentage',
       description: '100% recoverable from the whole-property tenant',
       approved: false,
@@ -84,14 +84,14 @@ function priorPeriodBills(): SharedBill[] {
   const rows: SharedBill[] = [];
 
   const water = [
-    { period: ['2026-05-01', '2026-06-30'], due: '2026-07-01', effective: '2026-06-30', total: 388, ref: '4470', agreement: AGREEMENT_IDS.comptonWater5050, reviewed: '2026-07-02' },
-    { period: ['2026-03-01', '2026-04-30'], due: '2026-05-01', effective: '2026-04-30', total: 401.5, ref: '4469', agreement: AGREEMENT_IDS.comptonWater5050, reviewed: '2026-05-03' },
-    { period: ['2026-01-01', '2026-02-28'], due: '2026-03-01', effective: '2026-02-28', total: 372.8, ref: '4468', agreement: AGREEMENT_IDS.comptonWater5050, reviewed: '2026-03-04' },
+    { period: ['2026-05-01', '2026-06-30'], due: '2026-07-01', effective: '2026-06-30', total: 388, ref: '4470', agreement: AGREEMENT_IDS.harlowWater5050, reviewed: '2026-07-02' },
+    { period: ['2026-03-01', '2026-04-30'], due: '2026-05-01', effective: '2026-04-30', total: 401.5, ref: '4469', agreement: AGREEMENT_IDS.harlowWater5050, reviewed: '2026-05-03' },
+    { period: ['2026-01-01', '2026-02-28'], due: '2026-03-01', effective: '2026-02-28', total: 372.8, ref: '4468', agreement: AGREEMENT_IDS.harlowWater5050, reviewed: '2026-03-04' },
   ];
   water.forEach((entry, index) => {
     rows.push({
       id: `bill-uu-prior-${index}`,
-      propertyId: PROPERTY_IDS.comptonRd,
+      propertyId: PROPERTY_IDS.harlowRd,
       category: 'water',
       supplier: 'Urban Utilities',
       reference: entry.ref,
@@ -116,7 +116,7 @@ function priorPeriodBills(): SharedBill[] {
   electricity.forEach((entry) => {
     rows.push({
       id: `bill-energex-2026-${entry.month}`,
-      propertyId: PROPERTY_IDS.comptonRd,
+      propertyId: PROPERTY_IDS.harlowRd,
       category: 'electricity',
       supplier: 'Energex Retail',
       reference: '7741',
@@ -127,7 +127,7 @@ function priorPeriodBills(): SharedBill[] {
       effectiveOn: `2026-${entry.month}-28`,
       postedAt: `2026-${entry.month}-26T10:00:00.000Z`,
       basisAmount: 'actual',
-      agreementId: AGREEMENT_IDS.comptonElectricity,
+      agreementId: AGREEMENT_IDS.harlowElectricity,
       recoveryReviewedOn: `2026-${entry.month}-27`,
       recoveryDeadline: null,
     });
@@ -136,8 +136,8 @@ function priorPeriodBills(): SharedBill[] {
   // A bill with no agreement at all — distinct from one whose agreement is
   // merely unapproved, and shown as a different blocking reason.
   rows.push({
-    id: 'bill-internet-mians',
-    propertyId: PROPERTY_IDS.miansRd,
+    id: 'bill-internet-vernon',
+    propertyId: PROPERTY_IDS.vernonRd,
     category: 'internet',
     supplier: 'Aussie Broadband',
     reference: 'AB-99120',
@@ -155,8 +155,8 @@ function priorPeriodBills(): SharedBill[] {
 
   // Cleaning, split equally between the two room groups.
   rows.push({
-    id: 'bill-cleaning-compton',
-    propertyId: PROPERTY_IDS.comptonRd,
+    id: 'bill-cleaning-harlow',
+    propertyId: PROPERTY_IDS.harlowRd,
     category: 'cleaning',
     supplier: 'Bright Spaces Cleaning',
     reference: 'BSC-2208',
@@ -167,7 +167,7 @@ function priorPeriodBills(): SharedBill[] {
     effectiveOn: '2026-08-31',
     postedAt: '2026-09-03T10:00:00.000Z',
     basisAmount: 'actual',
-    agreementId: AGREEMENT_IDS.comptonWater6040,
+    agreementId: AGREEMENT_IDS.harlowWater6040,
     recoveryReviewedOn: null,
     recoveryDeadline: '2026-11-30',
   });
@@ -180,7 +180,7 @@ export function seedSharedBills(): readonly SharedBill[] {
     ...priorPeriodBills(),
     {
       id: BILL_IDS.urbanUtilitiesAug,
-      propertyId: PROPERTY_IDS.comptonRd,
+      propertyId: PROPERTY_IDS.harlowRd,
       category: 'water',
       supplier: 'Urban Utilities',
       reference: '4471',
@@ -191,14 +191,14 @@ export function seedSharedBills(): readonly SharedBill[] {
       effectiveOn: '2026-08-31',
       postedAt: '2026-08-25T16:04:00.000Z',
       basisAmount: 'actual',
-      agreementId: AGREEMENT_IDS.comptonWater6040,
+      agreementId: AGREEMENT_IDS.harlowWater6040,
       sourceDocumentId: asId<'Document'>('doc-urban-utilities'),
       recoveryReviewedOn: '2026-08-26',
       recoveryDeadline: null,
     },
     {
       id: BILL_IDS.energexAug,
-      propertyId: PROPERTY_IDS.comptonRd,
+      propertyId: PROPERTY_IDS.harlowRd,
       category: 'electricity',
       supplier: 'Energex Retail',
       reference: '7741',
@@ -209,14 +209,14 @@ export function seedSharedBills(): readonly SharedBill[] {
       effectiveOn: '2026-08-31',
       postedAt: '2026-09-04T09:10:00.000Z',
       basisAmount: 'actual',
-      agreementId: AGREEMENT_IDS.comptonElectricity,
+      agreementId: AGREEMENT_IDS.harlowElectricity,
       // Not yet reviewed — distinct from "reviewed and found not recoverable".
       recoveryReviewedOn: null,
       recoveryDeadline: null,
     },
     {
-      id: BILL_IDS.bentonWaterJul,
-      propertyId: PROPERTY_IDS.bentonSt,
+      id: BILL_IDS.marlinWaterJul,
+      propertyId: PROPERTY_IDS.marlinSt,
       category: 'water',
       supplier: 'Urban Utilities',
       total: fromMajorUnits(214.5),
@@ -226,7 +226,7 @@ export function seedSharedBills(): readonly SharedBill[] {
       effectiveOn: '2026-07-31',
       postedAt: '2026-08-14T11:00:00.000Z',
       basisAmount: 'actual',
-      agreementId: AGREEMENT_IDS.bentonWater,
+      agreementId: AGREEMENT_IDS.marlinWater,
       recoveryReviewedOn: null,
       recoveryDeadline: null,
     },
@@ -269,11 +269,11 @@ function priorPeriodShares(): BillShare[] {
     });
   });
 
-  splitAcrossRoomGroups('bill-cleaning-compton', 60, 40);
+  splitAcrossRoomGroups('bill-cleaning-harlow', 60, 40);
 
   rows.push({
-    id: 'share-internet-mians',
-    billId: 'bill-internet-mians',
+    id: 'share-internet-vernon',
+    billId: 'bill-internet-vernon',
     leaseId: null,
     label: 'Owner · vacant period',
     weight: 100,
@@ -316,9 +316,9 @@ export function seedBillShares(): readonly BillShare[] {
       recoverable: false,
     },
     {
-      id: 'share-benton-whole',
-      billId: BILL_IDS.bentonWaterJul,
-      leaseId: LEASE_IDS.patelBenton,
+      id: 'share-marlin-whole',
+      billId: BILL_IDS.marlinWaterJul,
+      leaseId: LEASE_IDS.patelMarlin,
       label: 'Whole property',
       weight: 100,
       amount: zero,

@@ -52,7 +52,7 @@ export type SecurityKind = 'single' | 'pool' | 'unsecured';
 export interface LoanSecurity {
   readonly kind: SecurityKind;
   readonly propertyIds: readonly PropertyId[];
-  /** Display label, e.g. "Compton Rd + Benton St". */
+  /** Display label, e.g. "Harlow Rd + Marlin St". */
   readonly label: string;
 }
 

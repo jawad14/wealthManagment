@@ -62,7 +62,7 @@ export default function DesignSystemPage() {
             </div>
             <div className="type-row">
               <small>Table · 13/400</small>
-              <span style={{ fontSize: 13 }}>166 Compton Rd · Room 3</span>
+              <span style={{ fontSize: 13 }}>14 Harlow Rd · Room 3</span>
             </div>
             <div className="type-row">
               <small>Meta · 12/400 muted</small>

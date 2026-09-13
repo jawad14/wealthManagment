@@ -70,11 +70,11 @@ export function PropertiesScreen({ cardsByFilter, counts, entities, today }: Pro
               {({ fieldErrors }) => (
                 <FieldGrid>
                   <TextField
-                    id="prop-name" name="name" label="Name" required placeholder="166 Compton Rd, Woodridge"
+                    id="prop-name" name="name" label="Name" required placeholder="14 Harlow Rd, Ashgrove"
                     invalid={Boolean(firstError(fieldErrors, 'name'))}
                     hint={firstError(fieldErrors, 'name')}
                   />
-                  <TextField id="prop-address" name="fullAddress" label="Full address" placeholder="166 Compton Rd, Woodridge QLD 4114" />
+                  <TextField id="prop-address" name="fullAddress" label="Full address" placeholder="14 Harlow Rd, Ashgrove QLD 4060" />
                   <SelectField
                     id="prop-owner" name="ownerEntityId" label="Owned by" required
                     options={[{ value: '', label: 'Choose an entity…' }, ...entities.map((e) => ({ value: e.id, label: e.name }))]}

@@ -11,7 +11,7 @@ import { createLeaseAction } from '../actions';
 import type { RentFrequency } from '../model';
 
 export interface NewLeaseFormProps {
-  /** Where the new lease would sit, e.g. "Room 6 · 166 Compton Rd". */
+  /** Where the new lease would sit, e.g. "Room 6 · 14 Harlow Rd". */
   readonly targetLabel: string;
   readonly suggestedReference: string;
   readonly defaultStartsOn: string;

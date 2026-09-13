@@ -139,7 +139,7 @@ describe('expenses actions', () => {
   });
 
   it('refuses a void without a reason', async () => {
-    const result = await voidExpenseAction(idle, formOf({ expenseId: 'exp-insurance-benton' }));
+    const result = await voidExpenseAction(idle, formOf({ expenseId: 'exp-insurance-marlin' }));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.message).toMatch(/Reason is required/i);
   });
@@ -151,8 +151,8 @@ describe('leases actions', () => {
       idle,
       formOf({
         tenantName: 'J. Fielding',
-        propertyId: PROPERTY_IDS.comptonRd,
-        componentId: COMPONENT_IDS.comptonRoom6,
+        propertyId: PROPERTY_IDS.harlowRd,
+        componentId: COMPONENT_IDS.harlowRoom6,
         reference: '166C-R6',
         startsOn: '2026-09-15',
         endsOn: '2027-09-14',
@@ -173,7 +173,7 @@ describe('leases actions', () => {
     const result = await createLeaseAction(
       idle,
       formOf({
-        tenantName: 'X', propertyId: PROPERTY_IDS.comptonRd, reference: 'X-1',
+        tenantName: 'X', propertyId: PROPERTY_IDS.harlowRd, reference: 'X-1',
         startsOn: '2027-01-01', endsOn: '2026-01-01', rent: '300',
       }),
     );
@@ -186,7 +186,7 @@ describe('leases actions', () => {
     const created = await createLeaseAction(
       idle,
       formOf({
-        tenantName: 'K. Short', propertyId: PROPERTY_IDS.comptonRd, reference: 'TERM-1',
+        tenantName: 'K. Short', propertyId: PROPERTY_IDS.harlowRd, reference: 'TERM-1',
         startsOn: '2026-09-15', endsOn: '2027-09-14', rent: '340', frequency: 'weekly',
       }),
     );
@@ -214,7 +214,7 @@ describe('entities actions', () => {
     const result = await createRelationshipAction(
       idle,
       formOf({
-        subjectEntityId: ENTITY_IDS.jawad,
+        subjectEntityId: ENTITY_IDS.adam,
         kind: 'beneficiary-of',
         targetEntityId: ENTITY_IDS.familyTrust,
         sharePercent: '50',
@@ -231,11 +231,11 @@ describe('entities actions', () => {
     const result = await createRelationshipAction(
       idle,
       formOf({
-        subjectEntityId: ENTITY_IDS.jawad,
+        subjectEntityId: ENTITY_IDS.adam,
         kind: 'owns',
-        targetPropertyId: PROPERTY_IDS.miansRd,
+        targetPropertyId: PROPERTY_IDS.vernonRd,
         from: '2026-01-01',
-        label: 'Owns · Mians Rd',
+        label: 'Owns · Vernon Rd',
       }),
     );
 

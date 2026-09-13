@@ -84,14 +84,14 @@ These match the prototype exactly, because the seeded records reproduce them:
 | Import: needs review | 3 | 3 | ✅ |
 | Import: unmatched | 4 · $3,120 | 4 · $3,120 | ✅ |
 | Monthly repayments | $11,940 | $11,940 | ✅ |
-| Next rate review | 30 Sep · Watson Rd · fixed 5.89% | identical | ✅ |
+| Next rate review | 30 Sep · Calder Rd · fixed 5.89% | identical | ✅ |
 | Stale valuations | 3 | 3 | ✅ |
 | Overdue obligations | 2 | 2 | ✅ |
 | Obligations with no owner | 1 | 1 | ✅ |
-| Ownership gap | Watson Rd: consolidation method not chosen | identical | ✅ |
+| Ownership gap | Calder Rd: consolidation method not chosen | identical | ✅ |
 | All property valuations & labels | 5 cards | identical | ✅ |
-| Benton St rent/month | $2,990 | $2,990 | ✅ |
-| Compton room table | 6 rows, balances −350/0/−200/+340/0 | identical | ✅ |
+| Marlin St rent/month | $2,990 | $2,990 | ✅ |
+| Harlow room table | 6 rows, balances −350/0/−200/+340/0 | identical | ✅ |
 | Lease next-charge dates | 8 Sep, 9 Sep, Paused, 8 Sep | identical | ✅ |
 | Patel lease status | Ends in 55 days | Ends in 55 days | ✅ |
 | New lease charge count | 53 | 53 | ✅ |
@@ -107,7 +107,7 @@ The four facilities listed are:
 Macquarie 4417   612,400  liability
 CBA 8820       1,184,000  liability
 ANZ 3305         410,300  liability
-S. Khalid        120,000  RECEIVABLE  ("Receivable, not an expense (FR-11)")
+M. Devlin        120,000  RECEIVABLE  ("Receivable, not an expense (FR-11)")
                 ─────────
 liabilities    2,206,700
 + receivable     120,000
@@ -150,17 +150,17 @@ balances, superannuation, or other holdings). Rather than invent records, the ap
 computes assets from what exists. Its ownership breakdown reconciles exactly:
 
 ```
-Siddique Family Trust   1,529,700
-Jawad Siddique            339,800
-Mahvish Gull              219,800
-Esteem Development         74,000
+Whitfield Family Trust   1,529,700
+Adam Whitfield            339,800
+Nadia Whitfield              219,800
+Northgate Holdings         74,000
                         ─────────
                         2,163,300  = net worth ✅ (BR-02 verified)
 ```
 
 The prototype's own entity figures do **not** reconcile this way — its dashboard
-ownership view omits Mahvish entirely, and its Esteem figure ($1,810,000) cannot
-be derived from Esteem's properties minus its debt ($1,258,000 − $1,184,000 =
+ownership view omits Nadia entirely, and its Northgate figure ($1,810,000) cannot
+be derived from Northgate's properties minus its debt ($1,258,000 − $1,184,000 =
 $74,000).
 
 **Open question for the requirements document: what asset classes beyond property
@@ -173,7 +173,7 @@ reproducible only as `2,326,700 ÷ 7,148,000` — total debt over *total assets*
 not over collateral.
 
 The app applies BR-04 strictly: two of the four properties securing debt
-(20 Benton St, agent appraisal Jun 2025; Mians Rd, purchase price 2023) have no
+(8 Marlin St, agent appraisal Jun 2025; Vernon Rd, purchase price 2023) have no
 valuation eligible for ratio maths, so the denominator is incomplete and the
 ratio would understate gearing. It reports:
 
@@ -181,7 +181,7 @@ ratio would understate gearing. It reports:
 > eligible valuation
 
 This is the design's own "Unavailable beats zero" rule applied consistently. The
-per-property LVR for Watson Rd (58.2%) still computes and matches the prototype.
+per-property LVR for Calder Rd (58.2%) still computes and matches the prototype.
 
 ### 3.4 Repayment split — $854 principal / $11,086 interest
 
@@ -218,8 +218,8 @@ Counts are still *derived*, never hard-coded — they cannot contradict the list
 beneath them.
 
 **Leases "Active" remains 6, not 7.** A seventh active tenancy has nowhere
-coherent to live: the prototype shows Room 6 at Compton Rd vacant since 24 Aug
-(and targets it with the new-lease form) and Mians Rd vacant since its lease
+coherent to live: the prototype shows Room 6 at Harlow Rd vacant since 24 Aug
+(and targets it with the new-lease form) and Vernon Rd vacant since its lease
 ended 20 Aug. Adding a seventh would contradict the property data on the same
 screen. Six ended tenancies are seeded instead, which explain both vacancy dates.
 
@@ -241,7 +241,7 @@ on the obligations screen itself.
 
 | Item | Prototype | App | Why |
 | --- | --- | --- | --- |
-| Compton Rd rent/month | $11,200 | $7,063 | Computed from the six room leases shown: (350+330+340+360)/wk + 500/fortnight, annualised ÷ 12 |
+| Harlow Rd rent/month | $11,200 | $7,063 | Computed from the six room leases shown: (350+330+340+360)/wk + 500/fortnight, annualised ÷ 12 |
 | A. Nguyen arrears age | "Partial · 4 days" | "Partial · 12 days" | The reconcile screen dates that charge 25 Aug; 6 Sep − 25 Aug = 12 |
 | Cash outgoings delta | "–" (flat) | 3.5% | Aug $19,870 vs Jul $19,200 is a real +3.5%; the app shows it rather than suppressing it |
 | Bank import table | 5 rows | 38 rows | The prototype showed a sample; the app lists the whole staged import |

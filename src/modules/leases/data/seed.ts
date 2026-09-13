@@ -32,7 +32,7 @@ export const LEASE_IDS = {
   nguyenR3: asId<'Lease'>('lease-166c-r3'),
   williamsR4: asId<'Lease'>('lease-166c-r4'),
   rahmanR5: asId<'Lease'>('lease-166c-r5'),
-  patelBenton: asId<'Lease'>('lease-20b-wh'),
+  patelMarlin: asId<'Lease'>('lease-20b-wh'),
 
   // Ended tenancies. Kept so paid history and the reasons for a vacancy stay
   // inspectable — an ended lease is never deleted.
@@ -40,8 +40,8 @@ export const LEASE_IDS = {
   aliR2: asId<'Lease'>('lease-166c-r2-prior'),
   tranR3: asId<'Lease'>('lease-166c-r3-prior'),
   mensahR6: asId<'Lease'>('lease-166c-r6-prior'),
-  kaurMians: asId<'Lease'>('lease-mians-prior'),
-  doyleBenton: asId<'Lease'>('lease-20b-prior'),
+  kaurVernon: asId<'Lease'>('lease-vernon-prior'),
+  doyleMarlin: asId<'Lease'>('lease-20b-prior'),
 };
 
 export function seedTenants(): readonly Tenant[] {
@@ -66,8 +66,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.okaforR1,
       tenantId: TENANT_IDS.okafor,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom1,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom1,
       reference: '166C-R1',
       startsOn: '2026-02-01',
       endsOn: '2027-01-31',
@@ -80,8 +80,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.chenR2,
       tenantId: TENANT_IDS.chen,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom2,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom2,
       reference: '166C-R2',
       startsOn: '2026-04-15',
       endsOn: '2027-04-14',
@@ -94,8 +94,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.nguyenR3,
       tenantId: TENANT_IDS.nguyen,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom3,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom3,
       reference: '166C-R3',
       startsOn: '2026-06-01',
       endsOn: '2027-05-31',
@@ -108,8 +108,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.williamsR4,
       tenantId: TENANT_IDS.williams,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom4,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom4,
       reference: '166C-R4',
       startsOn: '2026-07-01',
       endsOn: '2027-06-30',
@@ -122,8 +122,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.rahmanR5,
       tenantId: TENANT_IDS.rahman,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom5,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom5,
       reference: '166C-R5',
       startsOn: '2026-08-10',
       endsOn: '2027-08-09',
@@ -134,10 +134,10 @@ export function seedLeases(): readonly Lease[] {
       disputed: false,
     },
     {
-      id: LEASE_IDS.patelBenton,
+      id: LEASE_IDS.patelMarlin,
       tenantId: TENANT_IDS.patel,
-      propertyId: PROPERTY_IDS.bentonSt,
-      componentId: COMPONENT_IDS.bentonWhole,
+      propertyId: PROPERTY_IDS.marlinSt,
+      componentId: COMPONENT_IDS.marlinWhole,
       reference: '20B-WH',
       startsOn: '2025-11-01',
       endsOn: '2026-10-31',
@@ -152,8 +152,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.brooksR1,
       tenantId: TENANT_IDS.brooks,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom1,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom1,
       reference: '166C-R1-P',
       startsOn: '2025-02-01',
       endsOn: '2026-01-31',
@@ -166,8 +166,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.aliR2,
       tenantId: TENANT_IDS.ali,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom2,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom2,
       reference: '166C-R2-P',
       startsOn: '2025-04-15',
       endsOn: '2026-04-14',
@@ -180,8 +180,8 @@ export function seedLeases(): readonly Lease[] {
     {
       id: LEASE_IDS.tranR3,
       tenantId: TENANT_IDS.tran,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom3,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom3,
       reference: '166C-R3-P',
       startsOn: '2025-06-01',
       endsOn: '2026-05-31',
@@ -195,8 +195,8 @@ export function seedLeases(): readonly Lease[] {
       // Explains why Room 6 shows "vacant since 24 Aug".
       id: LEASE_IDS.mensahR6,
       tenantId: TENANT_IDS.mensah,
-      propertyId: PROPERTY_IDS.comptonRd,
-      componentId: COMPONENT_IDS.comptonRoom6,
+      propertyId: PROPERTY_IDS.harlowRd,
+      componentId: COMPONENT_IDS.harlowRoom6,
       reference: '166C-R6-P',
       startsOn: '2025-08-25',
       endsOn: '2026-08-24',
@@ -207,12 +207,12 @@ export function seedLeases(): readonly Lease[] {
       disputed: false,
     },
     {
-      // Explains why Mians Rd shows "Lease ended 20 Aug".
-      id: LEASE_IDS.kaurMians,
+      // Explains why Vernon Rd shows "Lease ended 20 Aug".
+      id: LEASE_IDS.kaurVernon,
       tenantId: TENANT_IDS.kaur,
-      propertyId: PROPERTY_IDS.miansRd,
-      componentId: COMPONENT_IDS.miansWhole,
-      reference: 'MIANS-WH-P',
+      propertyId: PROPERTY_IDS.vernonRd,
+      componentId: COMPONENT_IDS.vernonWhole,
+      reference: 'VERNON-WH-P',
       startsOn: '2024-08-21',
       endsOn: '2026-08-20',
       rent: fromMajorUnits(560),
@@ -222,10 +222,10 @@ export function seedLeases(): readonly Lease[] {
       disputed: false,
     },
     {
-      id: LEASE_IDS.doyleBenton,
+      id: LEASE_IDS.doyleMarlin,
       tenantId: TENANT_IDS.doyle,
-      propertyId: PROPERTY_IDS.bentonSt,
-      componentId: COMPONENT_IDS.bentonWhole,
+      propertyId: PROPERTY_IDS.marlinSt,
+      componentId: COMPONENT_IDS.marlinWhole,
       reference: '20B-WH-P',
       startsOn: '2024-11-01',
       endsOn: '2025-10-31',
@@ -252,7 +252,7 @@ export function seedRentCharges(): readonly RentCharge[] {
     // Nguyen — fortnightly charge part-paid by the 28 Aug bank receipt.
     { id: asId<'RentCharge'>('chg-nguyen-0825'), leaseId: LEASE_IDS.nguyenR3, dueOn: '2026-08-25', amount: fromMajorUnits(500) },
     // Patel — fortnightly charge half-paid.
-    { id: asId<'RentCharge'>('chg-patel-0828'), leaseId: LEASE_IDS.patelBenton, dueOn: '2026-08-28', amount: fromMajorUnits(1_380) },
+    { id: asId<'RentCharge'>('chg-patel-0828'), leaseId: LEASE_IDS.patelMarlin, dueOn: '2026-08-28', amount: fromMajorUnits(1_380) },
     // Williams — charged and paid, plus a week paid in advance (see allocations).
     { id: asId<'RentCharge'>('chg-williams-0902'), leaseId: LEASE_IDS.williamsR4, dueOn: '2026-09-02', amount: fromMajorUnits(340) },
   ];

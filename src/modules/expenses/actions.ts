@@ -39,6 +39,7 @@ export async function createExpenseAction(
     }
 
     const propertyId = readString(form, 'propertyId');
+    const loanId = readString(form, 'loanId');
     const evidenceId = readString(form, 'evidenceDocumentId');
     const now = new Date().toISOString();
 
@@ -54,6 +55,7 @@ export async function createExpenseAction(
           allocation: {
             entityId: asId<'Entity'>(requireString(form, 'entityId', 'Entity')),
             ...(propertyId ? { propertyId: asId<'Property'>(propertyId) } : {}),
+            ...(loanId ? { loanId: asId<'Loan'>(loanId) } : {}),
           },
           basis: readChoice(form, 'basis', BASES) ?? 'actual',
           description: requireString(form, 'description', 'Description'),

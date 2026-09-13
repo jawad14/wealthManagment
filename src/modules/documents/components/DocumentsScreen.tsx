@@ -127,7 +127,7 @@ export function DocumentsScreen({ rowsByFilter, counts, linkTargets }: Documents
                 <FieldGrid>
                   <TextField
                     id="doc-filename" name="filename" label="File name" required
-                    placeholder="Rates notice 166 Compton Rd Q2 2026.pdf"
+                    placeholder="Rates notice 14 Harlow Rd Q2 2026.pdf"
                     invalid={Boolean(firstError(fieldErrors, 'filename'))}
                     hint={firstError(fieldErrors, 'filename')}
                   />

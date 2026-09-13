@@ -70,7 +70,7 @@ export function EntitiesScreen({ rowsByFilter, counts }: EntitiesScreenProps) {
                 {({ fieldErrors }) => (
                   <FieldGrid>
                     <TextField
-                      id="ent-name" name="name" label="Name" required placeholder="Esteem Development Pty Ltd"
+                      id="ent-name" name="name" label="Name" required placeholder="Northgate Holdings Pty Ltd"
                       invalid={Boolean(firstError(fieldErrors, 'name'))}
                       hint={firstError(fieldErrors, 'name')}
                     />

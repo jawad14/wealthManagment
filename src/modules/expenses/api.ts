@@ -23,6 +23,7 @@ export const expensesApi = {
       ...(query.to ? { to: query.to } : {}),
       ...(query.propertyId ? { propertyId: asId<'Property'>(query.propertyId) } : {}),
       ...(query.entityId ? { entityId: asId<'Entity'>(query.entityId) } : {}),
+      ...(query.loanId ? { loanId: asId<'Loan'>(query.loanId) } : {}),
       ...(query.category ? { category: query.category } : {}),
       includeVoided: query.filter === 'voided',
     };

@@ -27,17 +27,17 @@ describe('BR-02 / UAT-01 · consolidation without duplication', () => {
   });
 
   it('counts a jointly-owned home once, split across both owners', () => {
-    const owners = entitiesService.ownersOf(PROPERTY_IDS.watsonRd, asOf);
+    const owners = entitiesService.ownersOf(PROPERTY_IDS.calderRd, asOf);
 
     expect(owners).toHaveLength(2);
     expect(owners.reduce((total, claim) => total + claim.share, 0)).toBeCloseTo(1, 10);
     expect(owners.map((claim) => claim.ownerEntityId).sort()).toEqual(
-      [ENTITY_IDS.jawad, ENTITY_IDS.mahvish].sort(),
+      [ENTITY_IDS.adam, ENTITY_IDS.nadia].sort(),
     );
   });
 
   it('keeps a non-rented principal residence as an asset (BR-01)', () => {
-    const home = propertiesService.require(PROPERTY_IDS.watsonRd);
+    const home = propertiesService.require(PROPERTY_IDS.calderRd);
     expect(home.status).toBe('own-home');
 
     const status = propertiesService.valuationStatus(home.id, asOf);
@@ -45,22 +45,22 @@ describe('BR-02 / UAT-01 · consolidation without duplication', () => {
 
     // It contributes to assets despite producing no rent.
     const claims = entitiesService.resolveOwnershipClaims(asOf);
-    expect(claims.some((claim) => claim.propertyId === PROPERTY_IDS.watsonRd)).toBe(true);
+    expect(claims.some((claim) => claim.propertyId === PROPERTY_IDS.calderRd)).toBe(true);
   });
 
   it('does not let a corporate trustee inherit the trust’s assets', () => {
-    // Esteem is trustee for the Family Trust. That relationship is control only.
+    // Northgate is trustee for the Family Trust. That relationship is control only.
     const trusteeLink = entitiesRepository
       .listRelationships()
-      .find((relation) => relation.kind === 'trustee-of' && relation.subjectEntityId === ENTITY_IDS.esteem);
+      .find((relation) => relation.kind === 'trustee-of' && relation.subjectEntityId === ENTITY_IDS.northgate);
 
     expect(trusteeLink).toBeDefined();
     expect(isControlRelation(trusteeLink!.kind)).toBe(true);
     expect(trusteeLink!.sharePercent).toBeUndefined();
 
     // The trust's properties are attributed to the trust, not to its trustee.
-    const comptonOwners = entitiesService.ownersOf(PROPERTY_IDS.comptonRd, asOf);
-    expect(comptonOwners.map((claim) => claim.ownerEntityId)).toEqual([ENTITY_IDS.familyTrust]);
+    const harlowOwners = entitiesService.ownersOf(PROPERTY_IDS.harlowRd, asOf);
+    expect(harlowOwners.map((claim) => claim.ownerEntityId)).toEqual([ENTITY_IDS.familyTrust]);
   });
 
   it('never assigns a percentage from beneficiary status alone (BR-02)', () => {
@@ -78,7 +78,7 @@ describe('BR-02 / UAT-01 · consolidation without duplication', () => {
     expect(() =>
       assertShareIntegrity({
         id: 'bad-relation',
-        subjectEntityId: ENTITY_IDS.jawad,
+        subjectEntityId: ENTITY_IDS.adam,
         kind: 'beneficiary-of',
         target: { type: 'entity', entityId: ENTITY_IDS.familyTrust },
         sharePercent: 50,

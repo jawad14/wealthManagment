@@ -22,6 +22,7 @@ import type {
   IsoDate,
   IsoDateTime,
   LeaseId,
+  LoanId,
   ObligationId,
   PropertyId,
   UserId,
@@ -74,6 +75,15 @@ export interface ExpenseAllocation {
   readonly propertyId?: PropertyId;
   readonly leaseId?: LeaseId;
   readonly obligationId?: ObligationId;
+  /**
+   * The facility this cost belongs to — set on interest and loan fees.
+   *
+   * Without it an interest expense could only name its facility in free text,
+   * which meant the ledger figure and the loan's own repayment split could
+   * drift apart with nothing to detect it. Optional because most expenses have
+   * no loan; required by nothing, but expected on `loan-interest`.
+   */
+  readonly loanId?: LoanId;
 }
 
 /**

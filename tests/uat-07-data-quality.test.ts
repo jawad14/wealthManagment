@@ -94,10 +94,10 @@ describe('UAT-07 · data-quality flags', () => {
 
   it('flags a property whose consolidation method has not been chosen', () => {
     const gaps = propertiesService.ownershipGaps(asOf);
-    const watson = gaps.find((gap) => gap.propertyId === PROPERTY_IDS.watsonRd);
+    const calder = gaps.find((gap) => gap.propertyId === PROPERTY_IDS.calderRd);
 
-    expect(watson).toBeDefined();
-    expect(watson!.reason).toBe('consolidation method not chosen');
+    expect(calder).toBeDefined();
+    expect(calder!.reason).toBe('consolidation method not chosen');
   });
 
   it('never renders a missing ratio as a number', () => {

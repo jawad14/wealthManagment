@@ -25,9 +25,9 @@ export default function LeasesPage() {
       counts={leasesService.counts(asOf)}
       newLease={{
         // Room 6 is the vacancy the prototype points this form at.
-        targetLabel: 'Room 6 · 166 Compton Rd',
-        propertyId: PROPERTY_IDS.comptonRd,
-        componentId: COMPONENT_IDS.comptonRoom6,
+        targetLabel: 'Room 6 · 14 Harlow Rd',
+        propertyId: PROPERTY_IDS.harlowRd,
+        componentId: COMPONENT_IDS.harlowRoom6,
         suggestedReference: '166C-R6',
         defaultStartsOn: '2026-09-15',
         defaultEndsOn: '2027-09-14',

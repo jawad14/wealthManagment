@@ -81,16 +81,16 @@ describe('FR-05 · early termination', () => {
   });
 
   it('leaves arrears unchanged when a tenant in arrears is terminated', () => {
-    const before = leasesService.arrearsFor(LEASE_IDS.patelBenton, AS_OF).outstanding.cents;
+    const before = leasesService.arrearsFor(LEASE_IDS.patelMarlin, AS_OF).outstanding.cents;
 
     leasesService.terminate({
-      leaseId: LEASE_IDS.patelBenton,
+      leaseId: LEASE_IDS.patelMarlin,
       endsOn: '2026-09-06',
       reason: 'Lease not renewed',
     });
 
     // Money already owed is not forgiven by ending the lease.
-    expect(leasesService.arrearsFor(LEASE_IDS.patelBenton, AS_OF).outstanding.cents).toBe(before);
+    expect(leasesService.arrearsFor(LEASE_IDS.patelMarlin, AS_OF).outstanding.cents).toBe(before);
   });
 
   it('rejects a termination without a reason, or outside the lease term', () => {

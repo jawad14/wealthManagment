@@ -97,7 +97,7 @@ export interface DispatchResult {
 export interface Obligation {
   readonly id: ObligationId;
   readonly title: string;
-  /** Secondary line, e.g. "166 Compton Rd · Terri Scheer". */
+  /** Secondary line, e.g. "14 Harlow Rd · Terri Scheer". */
   readonly contextLabel: string;
   readonly propertyId?: PropertyId;
   readonly dueOn: IsoDate;

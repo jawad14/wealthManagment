@@ -13,40 +13,40 @@ import { ForbiddenError } from '@/shared/lib/errors';
 
 describe('NFR-01 / UAT-04 · permission enforcement', () => {
   it('grants the portfolio owner whole-portfolio totals', () => {
-    const scope = accessService.scopeFor(USER_IDS.jawad);
+    const scope = accessService.scopeFor(USER_IDS.adam);
 
     expect(scope.scope).toBe('all');
     expect(() => accessService.requireCapability(scope, 'portfolio.totals.read')).not.toThrow();
   });
 
   it('denies an operations delegate the whole-portfolio totals', () => {
-    const scope = accessService.scopeFor(USER_IDS.mahvish);
+    const scope = accessService.scopeFor(USER_IDS.nadia);
 
     expect(() => accessService.requireCapability(scope, 'portfolio.totals.read')).toThrow(ForbiddenError);
   });
 
   it('lets a delegate reach only their assigned properties', () => {
-    const scope = accessService.scopeFor(USER_IDS.mahvish);
+    const scope = accessService.scopeFor(USER_IDS.nadia);
 
-    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.comptonRd)).not.toThrow();
-    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.bentonSt)).not.toThrow();
-    // Watson Rd and Mians Rd are outside the grant — a direct id must not work.
-    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.watsonRd)).toThrow(ForbiddenError);
-    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.miansRd)).toThrow(ForbiddenError);
+    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.harlowRd)).not.toThrow();
+    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.marlinSt)).not.toThrow();
+    // Calder Rd and Vernon Rd are outside the grant — a direct id must not work.
+    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.calderRd)).toThrow(ForbiddenError);
+    expect(() => accessService.requireProperty(scope, PROPERTY_IDS.vernonRd)).toThrow(ForbiddenError);
   });
 
   it('filters list results to the scope, so a delegate cannot enumerate the portfolio', () => {
-    const scope = accessService.scopeFor(USER_IDS.mahvish);
+    const scope = accessService.scopeFor(USER_IDS.nadia);
     const visible = accessService.filterProperties(scope, propertiesService.list());
 
     expect(visible.map((property) => property.id).sort()).toEqual(
-      [PROPERTY_IDS.bentonSt, PROPERTY_IDS.comptonRd].sort(),
+      [PROPERTY_IDS.marlinSt, PROPERTY_IDS.harlowRd].sort(),
     );
     expect(propertiesService.list().length).toBeGreaterThan(visible.length);
   });
 
   it('denies a family contributor everything except their assigned tasks', () => {
-    const scope = accessService.scopeFor(USER_IDS.hassan);
+    const scope = accessService.scopeFor(USER_IDS.leo);
 
     expect(() => accessService.requireCapability(scope, 'obligation.read')).not.toThrow();
     expect(() => accessService.requireCapability(scope, 'portfolio.totals.read')).toThrow(ForbiddenError);
@@ -73,7 +73,7 @@ describe('NFR-01 / UAT-04 · permission enforcement', () => {
   });
 
   it('denies by default — no capability is granted implicitly', () => {
-    const contributor = accessService.scopeFor(USER_IDS.hassan);
+    const contributor = accessService.scopeFor(USER_IDS.leo);
     const everyCapability = [
       'portfolio.totals.read',
       'property.read',

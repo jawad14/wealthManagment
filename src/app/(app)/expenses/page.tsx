@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { expensesService, type ExpenseFilter } from '@/modules/expenses/service';
 import { propertiesService } from '@/modules/properties/service';
 import { entitiesService } from '@/modules/entities/service';
+import { loansService } from '@/modules/loans/service';
 import { accessService } from '@/modules/access/service';
 import { documentsService } from '@/modules/documents/service';
 import { resolveAsOfDate } from '@/shared/config/app-config';
@@ -29,6 +30,12 @@ export default function ExpensesPage() {
       byCategory={expensesService.totalsByCategory()}
       propertyNames={Object.fromEntries(propertiesService.list().map((p) => [p.id, p.name]))}
       entityNames={Object.fromEntries(entitiesService.listEntities().map((e) => [e.id, e.name]))}
+      loanNames={Object.fromEntries(
+        loansService
+          .list()
+          .filter((loan) => loan.direction === 'liability')
+          .map((loan) => [loan.id, `${loan.lender} · ${loan.facilityName}`]),
+      )}
       userNames={Object.fromEntries(accessService.listAccess().map((row) => [row.user.id, row.user.name]))}
       today={resolveAsOfDate()}
       documents={documentsService

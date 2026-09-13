@@ -22,7 +22,7 @@ export interface DocumentView {
   readonly sizeLabel: string;
   /** Combined "Linked to" text, or null when the document is unlinked. */
   readonly linkLabel: string | null;
-  /** "20 Aug 26 · Jawad". */
+  /** "20 Aug 26 · Adam". */
   readonly uploadedLabel: string;
   readonly versionCount: number;
   /** Note from the newest version, shown beside the version count. */

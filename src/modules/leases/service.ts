@@ -57,7 +57,7 @@ export const leasesService = {
     return leasesRepository.findTenant(lease.tenantId)?.name ?? 'Unknown tenant';
   },
 
-  /** "166 Compton Rd · Room 3" — property plus component. */
+  /** "14 Harlow Rd · Room 3" — property plus component. */
   propertyLabel(lease: Lease, style: 'long' | 'short' = 'long'): string {
     const property = propertiesService.require(lease.propertyId);
     const component = lease.componentId

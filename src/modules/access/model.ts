@@ -26,7 +26,7 @@ export type MfaState = 'on' | 'not-required';
 export interface User {
   readonly id: UserId;
   readonly name: string;
-  /** Masked for display, e.g. "jawad@…". Full addresses are never rendered. */
+  /** Masked for display, e.g. "adam@…". Full addresses are never rendered. */
   readonly emailMasked?: string;
   readonly role: AccessRole;
   /** Marks people outside the household — shown as an "External" sub-label. */

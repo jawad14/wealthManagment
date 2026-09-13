@@ -39,43 +39,43 @@ export function OwnershipMap() {
 
           <g fontFamily="IBM Plex Sans, sans-serif" fontSize="11">
             <rect x="30" y="30" width="100" height="40" rx="8" fill="var(--info-bg)" />
-            <text x="80" y="47" textAnchor="middle" fill="var(--info)" fontWeight="600">Jawad</text>
+            <text x="80" y="47" textAnchor="middle" fill="var(--info)" fontWeight="600">Adam</text>
             <text x="80" y="61" textAnchor="middle" fill="var(--info)">Individual</text>
 
             <rect x="190" y="30" width="100" height="40" rx="8" fill="var(--gold-soft)" />
-            <text x="240" y="47" textAnchor="middle" fill="var(--gold-deep)" fontWeight="600">Esteem Dev</text>
+            <text x="240" y="47" textAnchor="middle" fill="var(--gold-deep)" fontWeight="600">Northgate</text>
             <text x="240" y="61" textAnchor="middle" fill="var(--gold-deep)">Company</text>
 
             <rect x="300" y="30" width="100" height="40" rx="8" fill="var(--info-bg)" />
-            <text x="350" y="47" textAnchor="middle" fill="var(--info)" fontWeight="600">Mahvish</text>
+            <text x="350" y="47" textAnchor="middle" fill="var(--info)" fontWeight="600">Nadia</text>
             <text x="350" y="61" textAnchor="middle" fill="var(--info)">Individual</text>
 
             <rect x="30" y="110" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="80" y="127" textAnchor="middle" fill="var(--text)" fontWeight="500">Watson Rd</text>
+            <text x="80" y="127" textAnchor="middle" fill="var(--text)" fontWeight="500">Calder Rd</text>
             <text x="80" y="141" textAnchor="middle" fill="var(--muted)">50 / 50 · own home</text>
 
             <rect x="180" y="110" width="100" height="40" rx="8" fill="var(--good-bg)" />
             <text x="230" y="127" textAnchor="middle" fill="var(--good)" fontWeight="600">Family Trust</text>
-            <text x="230" y="141" textAnchor="middle" fill="var(--good)">trustee: Esteem</text>
+            <text x="230" y="141" textAnchor="middle" fill="var(--good)">trustee: Northgate</text>
 
             <rect x="300" y="110" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="350" y="127" textAnchor="middle" fill="var(--text)" fontWeight="500">20 Benton St</text>
-            <text x="350" y="141" textAnchor="middle" fill="var(--muted)">Esteem · 100%</text>
+            <text x="350" y="127" textAnchor="middle" fill="var(--text)" fontWeight="500">8 Marlin St</text>
+            <text x="350" y="141" textAnchor="middle" fill="var(--muted)">Northgate · 100%</text>
 
             <rect x="30" y="190" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="80" y="207" textAnchor="middle" fill="var(--text)" fontWeight="500">Loan → S. Khalid</text>
+            <text x="80" y="207" textAnchor="middle" fill="var(--text)" fontWeight="500">Loan → M. Devlin</text>
             <text x="80" y="221" textAnchor="middle" fill="var(--muted)">receivable</text>
 
             <rect x="180" y="190" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="230" y="207" textAnchor="middle" fill="var(--text)" fontWeight="500">166 Compton Rd</text>
+            <text x="230" y="207" textAnchor="middle" fill="var(--text)" fontWeight="500">14 Harlow Rd</text>
             <text x="230" y="221" textAnchor="middle" fill="var(--muted)">Trust · 100% · 6 rooms</text>
 
             <rect x="30" y="270" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="80" y="287" textAnchor="middle" fill="var(--text)" fontWeight="500">Siddique SMSF</text>
+            <text x="80" y="287" textAnchor="middle" fill="var(--text)" fontWeight="500">Whitfield SMSF</text>
             <text x="80" y="301" textAnchor="middle" fill="var(--muted)">member · not consolidated</text>
 
             <rect x="180" y="270" width="100" height="40" rx="8" fill="var(--surface-2)" stroke="var(--line)" />
-            <text x="230" y="287" textAnchor="middle" fill="var(--text)" fontWeight="500">Mians Rd</text>
+            <text x="230" y="287" textAnchor="middle" fill="var(--text)" fontWeight="500">Vernon Rd</text>
             <text x="230" y="301" textAnchor="middle" fill="var(--muted)">Trust · 100% · vacant</text>
 
             <path d="M230 230v40" stroke="var(--faint)" strokeWidth="1.2" fill="none" markerEnd="url(#arr)" />

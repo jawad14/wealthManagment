@@ -22,7 +22,7 @@ afterEach(() => {
 
 describe('FR-09 · exports carry the screen’s permissions', () => {
   it('lets the portfolio owner export net worth', () => {
-    asUser(USER_IDS.jawad);
+    asUser(USER_IDS.adam);
     const result = exportsService.exportExplanation('net-worth', asOf);
 
     expect(result.filename).toBe(`net-worth-${asOf}.csv`);
@@ -32,13 +32,13 @@ describe('FR-09 · exports carry the screen’s permissions', () => {
   });
 
   it('denies an operations delegate a net-worth export (UAT-04)', () => {
-    asUser(USER_IDS.mahvish);
+    asUser(USER_IDS.nadia);
     // The delegate cannot see portfolio totals on screen, so they cannot export them.
     expect(() => exportsService.exportExplanation('net-worth', asOf)).toThrow(ForbiddenError);
   });
 
   it('still lets that delegate export what they can see', () => {
-    asUser(USER_IDS.mahvish);
+    asUser(USER_IDS.nadia);
     // A delegate has lease.read but not export.create, so even a permitted
     // metric is refused — both rights are required.
     expect(() => exportsService.exportExplanation('arrears', asOf)).toThrow(ForbiddenError);
@@ -63,7 +63,7 @@ describe('FR-09 · exports carry the screen’s permissions', () => {
   });
 
   it('writes the rule and total into the file so it stands alone', () => {
-    asUser(USER_IDS.jawad);
+    asUser(USER_IDS.adam);
     const body = exportsService.exportExplanation('arrears', asOf).body;
 
     expect(body).toContain('BR-05');
@@ -72,7 +72,7 @@ describe('FR-09 · exports carry the screen’s permissions', () => {
   });
 
   it('escapes quotes so a crafted label cannot break the CSV', () => {
-    asUser(USER_IDS.jawad);
+    asUser(USER_IDS.adam);
     const body = exportsService.exportExplanation('operating-expenses', asOf).body;
     // Every data row must have balanced quoting.
     for (const line of body.split('\n').filter((row) => !row.startsWith('#'))) {
@@ -81,7 +81,7 @@ describe('FR-09 · exports carry the screen’s permissions', () => {
   });
 
   it('records every export in the audit log (NFR-03)', () => {
-    asUser(USER_IDS.jawad);
+    asUser(USER_IDS.adam);
     const before = accessService.listAuditEvents().length;
     exportsService.exportExplanation('assets', asOf);
     const after = accessService.listAuditEvents();

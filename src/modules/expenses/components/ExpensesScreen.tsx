@@ -38,6 +38,8 @@ export interface ExpensesScreenProps {
   /** Names resolved server-side so this component stays presentational. */
   readonly propertyNames: Record<string, string>;
   readonly entityNames: Record<string, string>;
+  /** Facilities an expense can be charged to — interest and loan fees. */
+  readonly loanNames: Record<string, string>;
   readonly userNames: Record<string, string>;
   readonly documents: readonly { readonly id: string; readonly name: string }[];
   readonly today: string;
@@ -56,6 +58,7 @@ export function ExpensesScreen({
   byCategory,
   propertyNames,
   entityNames,
+  loanNames,
   userNames,
   documents,
   today,
@@ -231,6 +234,14 @@ export function ExpensesScreen({
                       ]}
                     />
                     <SelectField
+                      id="exp-loan" name="loanId" label="Loan"
+                      hint="Set this on interest and loan fees so the cost ties to its facility"
+                      options={[
+                        { value: '', label: 'Not loan-related' },
+                        ...Object.entries(loanNames).map(([id, name]) => ({ value: id, label: name })),
+                      ]}
+                    />
+                    <SelectField
                       id="exp-basis" name="basis" label="Amount basis" defaultValue="actual"
                       hint="Anything other than actual is shown with a warning chip"
                       options={[
@@ -249,7 +260,13 @@ export function ExpensesScreen({
             </CardBody>
           </Card>
         ) : selected ? (
-          <ExpenseDetail view={selected} userNames={userNames} propertyNames={propertyNames} entityNames={entityNames} />
+          <ExpenseDetail
+            view={selected}
+            userNames={userNames}
+            propertyNames={propertyNames}
+            entityNames={entityNames}
+            loanNames={loanNames}
+          />
         ) : null}
       </Grid>
 
@@ -294,11 +311,13 @@ function ExpenseDetail({
   userNames,
   propertyNames,
   entityNames,
+  loanNames,
 }: {
   readonly view: ExpenseView;
   readonly userNames: Record<string, string>;
   readonly propertyNames: Record<string, string>;
   readonly entityNames: Record<string, string>;
+  readonly loanNames: Record<string, string>;
 }) {
   const { expense, current } = view;
 
@@ -344,6 +363,11 @@ function ExpenseDetail({
             label="Effective / posted"
             value={formatDateShort(current.effectiveOn)}
             meta={`Entered ${formatDateShort(current.postedAt.slice(0, 10))}`}
+          />
+          <Stat
+            label="Facility"
+            value={current.allocation.loanId ? (loanNames[current.allocation.loanId] ?? 'Unknown facility') : '—'}
+            meta={current.allocation.loanId ? 'Interest ties to this loan' : 'Not loan-related'}
           />
         </div>
 

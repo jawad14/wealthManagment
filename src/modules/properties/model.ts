@@ -15,13 +15,13 @@ export type RentalMode = 'by-room' | 'whole' | 'not-rented';
 
 export interface Property {
   readonly id: PropertyId;
-  /** Short name used in lists, e.g. "166 Compton Rd, Woodridge". */
+  /** Short name used in lists, e.g. "14 Harlow Rd, Ashgrove". */
   readonly name: string;
   /** Full address shown on the detail header. */
   readonly fullAddress: string;
   readonly status: PropertyStatus;
   readonly rentalMode: RentalMode;
-  /** Ownership summary line, e.g. "Siddique Family Trust · 100%". Derived labels live in the service. */
+  /** Ownership summary line, e.g. "Whitfield Family Trust · 100%". Derived labels live in the service. */
   readonly ownershipLabel: string;
   /** Long-form holding note including any corporate trustee. */
   readonly holdingNote: string;

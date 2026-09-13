@@ -101,7 +101,7 @@ export function AccessScreen({ people, auditEntries, continuity, properties }: A
                 {({ fieldErrors }) => (
                   <FieldGrid>
                     <TextField
-                      id="inv-name" name="name" label="Name" required placeholder="A. Kumar"
+                      id="inv-name" name="name" label="Name" required placeholder="D. Osei"
                       invalid={Boolean(firstError(fieldErrors, 'name'))}
                       hint={firstError(fieldErrors, 'name')}
                     />
