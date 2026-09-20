@@ -1,11 +1,13 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from '@/shared/components/Icon';
 import { APP_NAME, APP_TAGLINE } from '@/shared/config/app-config';
 import { NAV_GROUPS, NAV_ITEMS, viewFromPathname } from '@/shared/config/navigation';
 import { useNavigation } from './NavigationContext';
+import { ScopePicker } from './ScopePicker';
 
 export interface SidebarProps {
   /** Live counts for nav badges, resolved on the server and passed down. */
@@ -16,11 +18,16 @@ export interface SidebarProps {
   };
   /** Current scope label shown in the scope pill. */
   readonly scopeLabel: string;
+  /**
+   * Entities the dashboard can be scoped to. When the URL carries a matching
+   * `?entityId=`, the pill shows that entity instead of `scopeLabel`.
+   */
+  readonly scopeOptions?: readonly { readonly entityId: string; readonly entityName: string }[];
   readonly currentUserName: string;
   readonly currentUserRole: string;
 }
 
-export function Sidebar({ badges, scopeLabel, currentUserName, currentUserRole }: SidebarProps) {
+export function Sidebar({ badges, scopeLabel, scopeOptions, currentUserName, currentUserRole }: SidebarProps) {
   const pathname = usePathname();
   const activeView = viewFromPathname(pathname);
   const { isDrawerOpen, closeDrawer } = useNavigation();
@@ -42,13 +49,20 @@ export function Sidebar({ badges, scopeLabel, currentUserName, currentUserRole }
         </div>
       </div>
 
-      <button className="scope" title="Change scope (entity, property, period)" type="button">
-        <div>
-          <small>Viewing</small>
-          <strong>{scopeLabel}</strong>
-        </div>
-        <Icon name="i-chev-ud" />
-      </button>
+      {/* `ScopePicker` reads the URL, so it must sit under a Suspense boundary. */}
+      <Suspense
+        fallback={
+          <button className="scope" title="Change scope (entity, property, period)" type="button" disabled>
+            <div>
+              <small>Viewing</small>
+              <strong>{scopeLabel}</strong>
+            </div>
+            <Icon name="i-chev-ud" />
+          </button>
+        }
+      >
+        <ScopePicker allLabel={scopeLabel} options={scopeOptions ?? []} onNavigate={closeDrawer} />
+      </Suspense>
 
       <nav className="nav">
         {NAV_GROUPS.map((group) => (

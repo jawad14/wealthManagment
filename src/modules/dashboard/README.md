@@ -24,5 +24,14 @@ and BR-02.
 `reconciliation`. **All dependency arrows point into this module; it exports to
 none of them.** That is what keeps the graph acyclic.
 
-**Not yet implemented** — drill-down ("Explain this total"), scope switching by
-entity/property/period, snapshot creation on period close.
+**Scope switching (FR-09)** — `/dashboard?entityId=<id>` narrows net worth,
+assets, liabilities, stale valuations and the ownership view to one consolidated
+entity's attributed share. `dashboardService.resolveScope` maps an unknown or
+non-consolidated id to the whole portfolio. Snapshot movement is `null` when
+scoped, because snapshots are portfolio-wide. Cash flow, arrears, obligations and
+the attention strip carry no entity dimension and stay whole-portfolio; the page
+says so in a banner. The `/api/dashboard*` routes accept the same `entityId`.
+
+**Not yet implemented** — scope switching by property/period, entity-scoped
+drill-down ("Explain this total" is withheld on scoped tiles), snapshot creation
+on period close.

@@ -24,6 +24,18 @@ export interface PortfolioSnapshot {
   readonly label: string;
 }
 
+/**
+ * The entity a dashboard read is narrowed to. `null` wherever this type is
+ * optional means the whole portfolio, consolidated.
+ */
+export interface DashboardScope {
+  readonly entityId: EntityId;
+  readonly entityName: string;
+}
+
+/** One choice in the scope switcher. */
+export type ScopeOption = DashboardScope;
+
 /** Net worth and its two components at a point in time (BR-01). */
 export interface NetWorthBreakdown {
   readonly asOf: IsoDate;

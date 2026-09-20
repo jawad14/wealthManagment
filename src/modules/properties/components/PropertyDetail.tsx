@@ -6,8 +6,8 @@ import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Chip } from '@/shared/components/Chip';
 import { Button } from '@/shared/components/Button';
 import { Icon } from '@/shared/components/Icon';
-import { DataTable, CellMain, type DataTableColumn } from '@/shared/components/DataTable';
-import { Row, Sub } from '@/shared/components/Layout';
+import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
+import { Grid, Row, Stat, Sub } from '@/shared/components/Layout';
 import { Tabs } from '@/shared/components/Tabs';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
@@ -16,6 +16,14 @@ import { formatMoney, type Money } from '@/shared/lib/money';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
 import type { ArrearsState } from '@/modules/leases/model';
+import type { ObligationStatus } from '@/modules/obligations/model';
+import type {
+  PropertyDocumentRow,
+  PropertyObligationRow,
+  PropertyOverview,
+  SecuredLoanRow,
+  ValuationRow,
+} from '@/modules/dashboard/property-links';
 
 export interface RoomRow {
   readonly componentId: string;
@@ -37,10 +45,114 @@ const STATE_CHIP: Record<ArrearsState, { tone: Tone; icon: IconName; label: stri
   disputed: { tone: 'info', icon: 'i-pause', label: 'Disputed' },
 };
 
+const OBLIGATION_CHIP: Record<ObligationStatus, { tone: Tone; icon?: IconName }> = {
+  paid: { tone: 'good', icon: 'i-check' },
+  disputed: { tone: 'info', icon: 'i-pause' },
+  overdue: { tone: 'bad', icon: 'i-alert' },
+  'reminder-queued': { tone: 'info', icon: 'i-clock' },
+  scheduled: { tone: 'neutral' },
+  'not-eligible': { tone: 'warn', icon: 'i-alert' },
+};
+
+const VALUATION_COLUMNS: readonly DataTableColumn<ValuationRow>[] = [
+  {
+    header: 'Amount',
+    lead: true,
+    render: (row) => (
+      <Row>
+        <CellMain>
+          <span className="num">{formatMoney(row.amount)}</span>
+        </CellMain>
+        {row.isCurrent ? <Chip tone="good">Current</Chip> : null}
+      </Row>
+    ),
+  },
+  { header: 'Valued on', render: (row) => row.valuedOnLabel },
+  { header: 'Basis', render: (row) => row.basisLabel },
+  { header: 'Confidence', render: (row) => <span style={{ textTransform: 'capitalize' }}>{row.confidence}</span> },
+  { header: 'Source notes', render: (row) => <Sub>{row.note}</Sub> },
+];
+
+const LOAN_COLUMNS: readonly DataTableColumn<SecuredLoanRow>[] = [
+  { header: 'Lender', lead: true, render: (row) => <CellMain>{row.lender}</CellMain> },
+  {
+    header: 'Facility / security',
+    render: (row) => (
+      <>
+        <CellMain>{row.facilityName}</CellMain>
+        <CellSub>
+          {row.securityLabel}
+          {row.isPool ? ' · pooled security' : ''}
+          {row.isReceivable ? ' · receivable' : ''}
+        </CellSub>
+      </>
+    ),
+  },
+  { header: 'Balance', align: 'right', render: (row) => <span className="num">{formatMoney(row.balance)}</span> },
+  { header: 'Interest rate', render: (row) => <span className="num">{row.rateLabel}</span> },
+  { header: 'Repayment', render: (row) => row.repaymentType },
+];
+
+const OBLIGATION_COLUMNS: readonly DataTableColumn<PropertyObligationRow>[] = [
+  {
+    header: 'Obligation',
+    lead: true,
+    render: (row) => (
+      <>
+        <CellMain>{row.title}</CellMain>
+        <CellSub>{row.contextLabel}</CellSub>
+      </>
+    ),
+  },
+  { header: 'Due', render: (row) => row.dueLabel },
+  { header: 'Recurs', render: (row) => row.recurrenceLabel },
+  { header: 'Amount', align: 'right', render: (row) => <span className="num">{formatMoney(row.amount)}</span> },
+  {
+    header: 'Status',
+    render: (row) => {
+      const chip = OBLIGATION_CHIP[row.status];
+      return (
+        <Chip tone={chip.tone} icon={chip.icon}>
+          {row.statusLabel}
+        </Chip>
+      );
+    },
+  },
+];
+
+const DOCUMENT_COLUMNS: readonly DataTableColumn<PropertyDocumentRow>[] = [
+  {
+    header: 'Document',
+    lead: true,
+    render: (row) => (
+      <>
+        <CellMain>{row.filename}</CellMain>
+        {row.descriptor ? <CellSub>{row.descriptor}</CellSub> : null}
+      </>
+    ),
+  },
+  { header: 'Category', render: (row) => row.typeLabel },
+  {
+    header: 'Version',
+    render: (row) => (
+      <>
+        v{row.versionCount}
+        {row.latestVersionNote ? <CellSub>{row.latestVersionNote}</CellSub> : null}
+      </>
+    ),
+  },
+  { header: 'Uploaded', render: (row) => row.uploadedLabel },
+];
+
 export interface PropertyDetailProps {
   readonly title: string;
   readonly holdingNote: string;
   readonly rooms: readonly RoomRow[];
+  readonly overview: PropertyOverview;
+  readonly valuations: readonly ValuationRow[];
+  readonly loans: readonly SecuredLoanRow[];
+  readonly obligations: readonly PropertyObligationRow[];
+  readonly documents: readonly PropertyDocumentRow[];
   readonly componentNoun: string;
   readonly valuationDetail: string | null;
   readonly valuationAmount: Money | null;
@@ -60,6 +172,11 @@ export function PropertyDetail({
   title,
   holdingNote,
   rooms,
+  overview,
+  valuations,
+  loans,
+  obligations,
+  documents,
   componentNoun,
   valuationDetail,
   valuationAmount,
@@ -68,6 +185,7 @@ export function PropertyDetail({
 }: PropertyDetailProps) {
   const [tab, setTab] = useState<DetailTab>('rooms');
   const [isValuing, setValuing] = useState(false);
+  const activeLeases = rooms.filter((room) => room.state !== null).length;
 
   const columns: readonly DataTableColumn<RoomRow>[] = [
     { header: componentNoun, lead: true, render: (row) => <CellMain>{row.label}</CellMain> },
@@ -207,6 +325,58 @@ export function PropertyDetail({
 
       {tab === 'rooms' ? (
         <DataTable columns={columns} rows={rooms} rowKey={(row) => row.componentId} empty="No components recorded." />
+      ) : tab === 'overview' ? (
+        <CardBody>
+          <Grid columns={4}>
+            <Stat label="Address" value={overview.address} meta={overview.ownershipLabel} />
+            <Stat label="Rental mode" value={overview.rentalModeLabel} />
+            <Stat
+              label="Current valuation"
+              value={overview.valuationAmount ? formatMoney(overview.valuationAmount) : '—'}
+              meta={overview.valuationLabel}
+            />
+            <Stat
+              label="Active leases"
+              value={activeLeases}
+              meta={`of ${rooms.length} ${componentNoun.toLowerCase()}${rooms.length === 1 ? '' : 's'}`}
+            />
+            <Stat label="Securing loans" value={overview.securingLoanCount} />
+            <Stat
+              label="Debt against this property"
+              value={overview.securingLoanCount > 0 ? formatMoney(overview.totalDebt) : '—'}
+              meta={overview.debtNote}
+            />
+            <Stat label="LVR" value={overview.lvrLabel} />
+          </Grid>
+        </CardBody>
+      ) : tab === 'valuations' ? (
+        <DataTable
+          columns={VALUATION_COLUMNS}
+          rows={valuations}
+          rowKey={(row) => row.id}
+          empty="No valuations recorded."
+        />
+      ) : tab === 'loans' ? (
+        <DataTable
+          columns={LOAN_COLUMNS}
+          rows={loans}
+          rowKey={(row) => row.id}
+          empty="No loans are secured against this property."
+        />
+      ) : tab === 'obligations' ? (
+        <DataTable
+          columns={OBLIGATION_COLUMNS}
+          rows={obligations}
+          rowKey={(row) => row.id}
+          empty="No obligations are linked to this property."
+        />
+      ) : tab === 'documents' ? (
+        <DataTable
+          columns={DOCUMENT_COLUMNS}
+          rows={documents}
+          rowKey={(row) => row.id}
+          empty="No documents are linked to this property."
+        />
       ) : (
         <CardBody>
           <p className="sub" style={{ margin: 0 }}>

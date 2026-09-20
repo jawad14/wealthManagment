@@ -8,6 +8,12 @@ import type { NetWorthBreakdown } from '../model';
 import type { Money } from '@/shared/lib/money';
 
 export interface DashboardKpisProps {
+  /**
+   * Set when the balance-sheet tiles are scoped to one entity. Their drill-down
+   * links are withheld in that state: the explain screens break down the
+   * portfolio total, which would not reconcile to a scoped figure.
+   */
+  readonly scopeName?: string | null;
   readonly netWorth: NetWorthBreakdown;
   readonly monthlyCash: {
     readonly monthLabel: string;
@@ -34,15 +40,16 @@ function directionOf(ratio: number | null): 'up' | 'down' | 'flat' {
  * One hero tile only: net worth carries the charcoal fill, everything else stays
  * quiet so the eye lands in a single place.
  */
-export function DashboardKpis({ netWorth, monthlyCash, arrears, upcoming }: DashboardKpisProps) {
+export function DashboardKpis({ scopeName = null, netWorth, monthlyCash, arrears, upcoming }: DashboardKpisProps) {
   const movement = netWorth.movement;
+  const scoped = scopeName !== null;
 
   return (
     <KpiGrid>
       <Kpi
         accent
         wide
-        label="Net worth"
+        label={scoped ? `Net worth · ${scopeName}` : 'Net worth'}
         help="Included asset interests minus included liabilities at the as-of date (BR-01)"
         value={formatMoney(netWorth.netWorth)}
         valueSuffix={`as of ${formatDateShort(netWorth.asOf)}`}
@@ -57,6 +64,8 @@ export function DashboardKpis({ netWorth, monthlyCash, arrears, upcoming }: Dash
                 Explain this total
               </Link>
             </>
+          ) : scoped ? (
+            <>Attributed share · no entity-level snapshot to compare against</>
           ) : (
             <Link className="kpi-link" href="/explain/net-worth">
               Explain this total
@@ -66,7 +75,15 @@ export function DashboardKpis({ netWorth, monthlyCash, arrears, upcoming }: Dash
       />
 
       <Kpi
-        label={<Link className="kpi-link" href="/explain/assets">Assets (included interests)</Link>}
+        label={
+          scoped ? (
+            'Assets (attributed share)'
+          ) : (
+            <Link className="kpi-link" href="/explain/assets">
+              Assets (included interests)
+            </Link>
+          )
+        }
         value={formatMoney(netWorth.assets)}
         footer={
           netWorth.staleValuationCount > 0 ? (
@@ -82,7 +99,15 @@ export function DashboardKpis({ netWorth, monthlyCash, arrears, upcoming }: Dash
       />
 
       <Kpi
-        label={<Link className="kpi-link" href="/explain/liabilities">Liabilities</Link>}
+        label={
+          scoped ? (
+            'Liabilities (attributed share)'
+          ) : (
+            <Link className="kpi-link" href="/explain/liabilities">
+              Liabilities
+            </Link>
+          )
+        }
         value={formatMoney(netWorth.liabilities)}
         footer={
           movement ? (

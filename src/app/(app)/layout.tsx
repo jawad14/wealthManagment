@@ -7,6 +7,7 @@ import { reconciliationService } from '@/modules/reconciliation/service';
 import { sharedBillsService } from '@/modules/shared-bills/service';
 import { initialsOf } from '@/shared/components/Avatar';
 import { ROLE_LABELS } from '@/modules/access/model';
+import { dashboardService } from '@/modules/dashboard/service';
 
 /**
  * Chrome for every application screen.
@@ -27,6 +28,7 @@ export default function AppLayout({ children }: { readonly children: ReactNode }
         billsNeedingReview: sharedBillsService.counts()['needs-review'],
       }}
       scopeLabel="Whole portfolio · all entities"
+      scopeOptions={dashboardService.scopeOptions()}
       currentUserName={currentUser.name}
       currentUserRole={`${ROLE_LABELS[currentUser.role]} · MFA ${currentUser.mfa === 'on' ? 'on' : 'not required'}`}
       currentUserInitials={initialsOf(currentUser.name)}

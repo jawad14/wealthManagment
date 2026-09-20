@@ -4,7 +4,7 @@ import { propertiesService } from '@/modules/properties/service';
 import { obligationsService } from '@/modules/obligations/service';
 import { resolveAsOfDate } from '@/shared/config/app-config';
 import { ImportScreen } from '@/modules/reconciliation/components/ImportScreen';
-import { formatDateShort, toDate } from '@/shared/lib/dates';
+import { formatDateLong, formatDateShort, toDate } from '@/shared/lib/dates';
 import { Card, CardBody } from '@/shared/components/Card';
 
 export const metadata: Metadata = { title: 'Bank import & matching · Holdfast' };
@@ -42,10 +42,14 @@ export default function BankImportPage() {
           value: `Property · ${property.name}`,
           label: `Property · ${property.name}`,
         })),
-        ...obligationsService.listViews(resolveAsOfDate(), 'all').slice(0, 12).map((view) => ({
-          value: `Obligation · ${view.obligation.title}`,
-          label: `Obligation · ${view.obligation.title}`,
-        })),
+        // Titles repeat across properties and years ("Landlord insurance renewal"),
+        // and the value is stored as the correction note — so it carries the
+        // context and due date to say which obligation was meant.
+        ...obligationsService.listViews(resolveAsOfDate(), 'all').slice(0, 12).map((view) => {
+          const { title, contextLabel, dueOn } = view.obligation;
+          const text = `Obligation · ${title} · ${contextLabel} · due ${formatDateLong(dueOn)}`;
+          return { value: text, label: text };
+        }),
         { value: 'Internal transfer · excluded from cash flow', label: 'Internal transfer · excluded from cash flow' },
       ]}
     />

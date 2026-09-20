@@ -4,6 +4,7 @@ import { resolveAsOfDate } from '@/shared/config/app-config';
 import { propertiesService } from '@/modules/properties/service';
 import { leasesService } from '@/modules/leases/service';
 import { leasesRepository } from '@/modules/leases/repository';
+import { propertyLinksService } from '@/modules/dashboard/property-links';
 import { PropertyDetail, type RoomRow } from '@/modules/properties/components/PropertyDetail';
 import { FREQUENCY_LABELS } from '@/modules/leases/model';
 import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
@@ -16,7 +17,7 @@ interface PageProps {
   readonly params: Promise<{ readonly propertyId: string }>;
 }
 
-/** FR-02 — one property, its components and their leases. */
+/** FR-02 — one property, its components, their leases and every linked record. */
 export default async function PropertyDetailPage({ params }: PageProps) {
   const { propertyId } = await params;
   const asOf = resolveAsOfDate();
@@ -61,12 +62,18 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   });
 
   const valuation = propertiesService.valuationStatus(property.id, asOf);
+  const links = propertyLinksService.forProperty(property.id, asOf);
 
   return (
     <PropertyDetail
       title={property.fullAddress}
       holdingNote={property.holdingNote}
       rooms={rooms}
+      overview={links.overview}
+      valuations={links.valuations}
+      loans={links.loans}
+      obligations={links.obligations}
+      documents={links.documents}
       componentNoun={property.rentalMode === 'by-room' ? 'Room' : 'Component'}
       valuationDetail={propertiesService.valuationDetailLabel(property.id, asOf)}
       valuationAmount={valuation.valuation?.amount ?? null}

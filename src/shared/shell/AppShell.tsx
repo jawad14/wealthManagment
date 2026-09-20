@@ -22,6 +22,7 @@ export function AppShell({
   children,
   badges,
   scopeLabel,
+  scopeOptions,
   currentUserName,
   currentUserRole,
   asOfDate,
@@ -36,6 +37,7 @@ export function AppShell({
           <Sidebar
             badges={badges}
             scopeLabel={scopeLabel}
+            scopeOptions={scopeOptions}
             currentUserName={currentUserName}
             currentUserRole={currentUserRole}
           />

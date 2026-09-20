@@ -5,5 +5,8 @@ import { dashboardQuerySchema } from '@/modules/dashboard/validation';
 
 /** GET /api/dashboard — the full portfolio overview (FR-09). */
 export function GET(request: NextRequest) {
-  return handle(() => dashboardApi.overview(parseQuery(request, dashboardQuerySchema).asOf));
+  return handle(() => {
+    const query = parseQuery(request, dashboardQuerySchema);
+    return dashboardApi.overview(query.asOf, query.entityId);
+  });
 }

@@ -26,8 +26,10 @@ import type {
   AttentionItem,
   CashFlowPoint,
   FinancialPosition,
+  DashboardScope,
   NetWorthBreakdown,
   OwnershipPosition,
+  ScopeOption,
   SnapshotMovement,
 } from './model';
 
@@ -36,13 +38,43 @@ const CASH_FLOW_MONTHS = 6;
 
 export const dashboardService = {
   /**
+   * Entities a reader may scope the dashboard to.
+   *
+   * Only consolidated entities are offered: a manual-summary entity contributes
+   * nothing to the totals, so scoping to it would render a screen of zeros that
+   * reads as "this entity owns nothing" rather than "this entity is not counted".
+   */
+  scopeOptions(): readonly ScopeOption[] {
+    return entitiesService
+      .consolidatedEntityIds()
+      .map((entityId) => ({ entityId, entityName: entitiesService.nameOf(entityId) }));
+  },
+
+  /**
+   * Turn an untrusted `entityId` into a scope.
+   *
+   * An absent, unknown or non-consolidated id resolves to `null` — the whole
+   * portfolio — so a stale bookmark degrades to the consolidated view instead
+   * of an error page.
+   */
+  resolveScope(rawEntityId: string | undefined): DashboardScope | null {
+    if (!rawEntityId) return null;
+    return dashboardService.scopeOptions().find((option) => option.entityId === rawEntityId) ?? null;
+  },
+
+  /**
    * Total value of assets the portfolio has an interest in.
    *
    * Each property contributes `valuation × the share held by consolidated
    * entities`. An unallocated share is simply not counted — the platform never
    * assumes ownership it has not been told about.
+   *
+   * With `entityId`, the figure is that entity's attributed position (BR-02):
+   * its share of each property plus its share of any receivable it lent.
    */
-  totalAssets(asOf: IsoDate): Money {
+  totalAssets(asOf: IsoDate, entityId?: EntityId): Money {
+    if (entityId) return dashboardService.positionOf(asOf, entityId).assets;
+
     const consolidated = new Set<string>(entitiesService.consolidatedEntityIds());
 
     const propertyValue = propertiesService.list().map((property) => {
@@ -61,17 +93,25 @@ export const dashboardService = {
     return addMoney(sumMoney(propertyValue), loansService.totalReceivables());
   },
 
-  totalLiabilities(): Money {
+  /** All debt, or with `entityId` the debt attributed to that borrower (BR-02). */
+  totalLiabilities(asOf?: IsoDate, entityId?: EntityId): Money {
+    if (asOf && entityId) return dashboardService.positionOf(asOf, entityId).liabilities;
     return loansService.totalDebt();
   },
 
-  /** BR-01. */
-  netWorth(asOf: IsoDate): NetWorthBreakdown {
-    const assets = dashboardService.totalAssets(asOf);
-    const liabilities = dashboardService.totalLiabilities();
+  /**
+   * BR-01.
+   *
+   * Scoped to an entity, movement is `null`: snapshots record portfolio totals
+   * only, and comparing one entity against the whole portfolio's snapshot would
+   * report a collapse that never happened.
+   */
+  netWorth(asOf: IsoDate, entityId?: EntityId): NetWorthBreakdown {
+    const assets = dashboardService.totalAssets(asOf, entityId);
+    const liabilities = dashboardService.totalLiabilities(asOf, entityId);
     const netWorth = subtractMoney(assets, liabilities);
 
-    const snapshot = dashboardRepository.latestSnapshot(asOf);
+    const snapshot = entityId ? undefined : dashboardRepository.latestSnapshot(asOf);
     const movement: SnapshotMovement | null = snapshot
       ? {
           snapshotLabel: snapshot.label,
@@ -87,8 +127,28 @@ export const dashboardService = {
       liabilities,
       netWorth,
       movement,
-      staleValuationCount: propertiesService.staleValuationProperties(asOf).length,
+      staleValuationCount: propertiesService
+        .staleValuationProperties(asOf)
+        .filter(
+          (property) =>
+            !entityId ||
+            entitiesService.ownersOf(property.id, asOf).some((claim) => claim.ownerEntityId === entityId),
+        ).length,
     };
+  },
+
+  /** One entity's attributed position; zeros when it holds nothing. */
+  positionOf(asOf: IsoDate, entityId: EntityId): OwnershipPosition {
+    return (
+      dashboardService.ownershipPositions(asOf).find((position) => position.entityId === entityId) ?? {
+        entityId,
+        entityName: entitiesService.nameOf(entityId),
+        assets: money(0),
+        liabilities: money(0),
+        net: money(0),
+        shareOfTotal: 0,
+      }
+    );
   },
 
   /**
@@ -97,8 +157,12 @@ export const dashboardService = {
    * Assets are attributed by ownership share. Debt is attributed to the entities
    * named as borrowers, split evenly when a facility has several. Each property
    * and each facility therefore appears exactly once across all positions.
+   *
+   * With `entityId`, only that entity's row is returned. `shareOfTotal` stays
+   * relative to the whole portfolio, so the bar still answers "how much of the
+   * family's net worth sits here".
    */
-  ownershipPositions(asOf: IsoDate): readonly OwnershipPosition[] {
+  ownershipPositions(asOf: IsoDate, entityId?: EntityId): readonly OwnershipPosition[] {
     const consolidated = entitiesService.consolidatedEntityIds();
     const assetsByEntity = new Map<EntityId, Money>();
     const liabilitiesByEntity = new Map<EntityId, Money>();
@@ -146,6 +210,7 @@ export const dashboardService = {
         ...position,
         shareOfTotal: total.cents === 0 ? 0 : position.net.cents / total.cents,
       }))
+      .filter((position) => !entityId || position.entityId === entityId)
       .sort((a, b) => b.net.cents - a.net.cents);
   },
 
@@ -336,13 +401,21 @@ export const dashboardService = {
     return items;
   },
 
-  /** Everything the dashboard screen needs, in one call. */
-  overview(asOf: IsoDate) {
+  /**
+   * Everything the dashboard screen needs, in one call.
+   *
+   * `scope` narrows the balance-sheet figures — net worth, assets, liabilities,
+   * stale valuations and the ownership view — to one entity. Cash flow, arrears,
+   * obligations and the attention strip stay portfolio-wide: those records carry
+   * no entity dimension, and apportioning them by guesswork would invent figures.
+   */
+  overview(asOf: IsoDate, scope: DashboardScope | null = null) {
     const arrears = leasesService.arrearsSummary(asOf);
     return {
       asOf,
-      netWorth: dashboardService.netWorth(asOf),
-      ownership: dashboardService.ownershipPositions(asOf),
+      scope,
+      netWorth: dashboardService.netWorth(asOf, scope?.entityId),
+      ownership: dashboardService.ownershipPositions(asOf, scope?.entityId),
       cashFlow: dashboardService.cashFlow(asOf),
       cashFlowNote: dashboardService.cashFlowNote(asOf),
       monthlyCash: dashboardService.monthlyCashSummary(asOf),
