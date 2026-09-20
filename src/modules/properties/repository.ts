@@ -24,6 +24,8 @@ export const propertiesRepository = {
     )[0],
 
   insert: (property: Property): Property => properties.insert(property),
+  update: (id: PropertyId, changes: Partial<Omit<Property, 'id'>>): Property | undefined =>
+    properties.update(id, changes),
   addValuation: (valuation: Valuation): Valuation => valuations.insert(valuation),
 
   listComponents: (propertyId: PropertyId): readonly PropertyComponent[] =>

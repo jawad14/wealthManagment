@@ -111,6 +111,32 @@ export async function registerDocumentAction(
   });
 }
 
+/**
+ * Record a new version of an existing document (FR-04).
+ *
+ * Versions append — the original stays in the history. Like registration, this
+ * records metadata only; no file is stored in this build.
+ */
+export async function addDocumentVersionAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction('New version recorded · earlier versions retained', () => {
+    const note = readString(form, 'note');
+    const sizeMb = readAmount(form, 'sizeMb');
+
+    const result = documentsService.addVersion({
+      documentId: asId<'Document'>(requireString(form, 'documentId', 'Document')),
+      ...(note !== undefined ? { note } : {}),
+      ...(sizeMb !== undefined ? { sizeMb } : {}),
+      actor: accessService.getCurrentUser().id,
+    });
+    revalidate();
+    revalidatePath('/properties');
+    return result;
+  });
+}
+
 /** Hide a document. The record and every version stay — deletion never erases history. */
 export async function removeDocumentAction(
   _previous: ActionResult<unknown>,

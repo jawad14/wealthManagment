@@ -5,15 +5,14 @@ import Link from 'next/link';
 import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Chip } from '@/shared/components/Chip';
 import { Button } from '@/shared/components/Button';
-import { Icon } from '@/shared/components/Icon';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { Grid, Row, Stat, Sub } from '@/shared/components/Layout';
 import { Tabs } from '@/shared/components/Tabs';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
-import { addComponentAction, addValuationAction } from '../actions';
+import { addComponentAction, addValuationAction, updatePropertyAction } from '../actions';
 import { formatMoney, formatPercent, type Money } from '@/shared/lib/money';
-import type { CapitalGrowth } from '../model';
+import type { CapitalGrowth, PropertyStatus, RentalMode } from '../model';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
 import type { ArrearsState } from '@/modules/leases/model';
@@ -147,6 +146,10 @@ const DOCUMENT_COLUMNS: readonly DataTableColumn<PropertyDocumentRow>[] = [
 
 export interface PropertyDetailProps {
   readonly title: string;
+  /** Short list name, editable alongside the full address shown as the title. */
+  readonly name: string;
+  readonly status: PropertyStatus;
+  readonly rentalMode: RentalMode;
   readonly holdingNote: string;
   readonly rooms: readonly RoomRow[];
   readonly overview: PropertyOverview;
@@ -174,6 +177,9 @@ type DetailTab = 'overview' | 'rooms' | 'loans' | 'obligations' | 'documents' | 
  */
 export function PropertyDetail({
   title,
+  name,
+  status,
+  rentalMode,
   holdingNote,
   rooms,
   overview,
@@ -191,6 +197,7 @@ export function PropertyDetail({
 }: PropertyDetailProps) {
   const [tab, setTab] = useState<DetailTab>('rooms');
   const [isValuing, setValuing] = useState(false);
+  const [isEditing, setEditing] = useState(false);
   const [isAddingComponent, setAddingComponent] = useState(false);
   const noun = componentNoun.toLowerCase();
   const activeLeases = rooms.filter((room) => room.state !== null).length;
@@ -277,8 +284,8 @@ export function PropertyDetail({
           <Button small onClick={() => setValuing((open) => !open)}>
             {isValuing ? 'Close' : 'Add valuation'}
           </Button>
-          <Button small variant="ghost" aria-label="More actions">
-            <Icon name="i-more" />
+          <Button small variant="ghost" aria-expanded={isEditing} onClick={() => setEditing((open) => !open)}>
+            {isEditing ? 'Close' : 'Edit property'}
           </Button>
         </Row>
       </CardHeader>
@@ -321,6 +328,55 @@ export function PropertyDetail({
                     { value: 'high', label: 'High' },
                     { value: 'medium', label: 'Medium' },
                     { value: 'low', label: 'Low' },
+                  ]}
+                />
+              </FieldGrid>
+            )}
+          </ActionForm>
+        </CardBody>
+      ) : null}
+
+      {isEditing ? (
+        <CardBody style={{ borderBottom: '1px solid var(--line-2)' }}>
+          <ActionForm
+            action={updatePropertyAction}
+            submitLabel="Save changes"
+            onCancel={() => setEditing(false)}
+            onSuccess={() => setEditing(false)}
+            hiddenFields={{ propertyId }}
+            footnote={
+              <Sub style={{ fontSize: 12 }}>
+                Ownership, cost basis and valuations are not changed here — each has its own record.
+              </Sub>
+            }
+          >
+            {({ fieldErrors }) => (
+              <FieldGrid>
+                <TextField
+                  id="edit-name" name="name" label="Name" required defaultValue={name}
+                  invalid={Boolean(firstError(fieldErrors, 'name'))}
+                  hint={firstError(fieldErrors, 'name')}
+                />
+                <TextField
+                  id="edit-address" name="fullAddress" label="Full address" required defaultValue={title}
+                  invalid={Boolean(firstError(fieldErrors, 'fullAddress'))}
+                  hint={firstError(fieldErrors, 'fullAddress')}
+                />
+                <SelectField
+                  id="edit-status" name="status" label="Status" defaultValue={status}
+                  options={[
+                    { value: 'rented', label: 'Rented' },
+                    { value: 'own-home', label: 'Own home' },
+                    { value: 'vacant', label: 'Vacant' },
+                    { value: 'under-construction', label: 'Under construction' },
+                  ]}
+                />
+                <SelectField
+                  id="edit-mode" name="rentalMode" label="Rental mode" defaultValue={rentalMode}
+                  options={[
+                    { value: 'by-room', label: 'By room' },
+                    { value: 'whole', label: 'Whole property' },
+                    { value: 'not-rented', label: 'Not rented' },
                   ]}
                 />
               </FieldGrid>

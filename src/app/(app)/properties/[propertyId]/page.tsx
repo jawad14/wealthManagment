@@ -67,6 +67,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   return (
     <PropertyDetail
       title={property.fullAddress}
+      name={property.name}
+      status={property.status}
+      rentalMode={property.rentalMode}
       holdingNote={property.holdingNote}
       rooms={rooms}
       overview={links.overview}

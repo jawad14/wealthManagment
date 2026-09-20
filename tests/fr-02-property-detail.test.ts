@@ -11,7 +11,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // in a unit test. The cache behaviour is Next's; what matters here is the write.
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
-import { addComponentAction, createPropertyAction } from '@/modules/properties/actions';
+import { addComponentAction, createPropertyAction, updatePropertyAction } from '@/modules/properties/actions';
+import { accessService } from '@/modules/access/service';
 import { dashboardService } from '@/modules/dashboard/service';
 import type { Property, PropertyComponent } from '@/modules/properties/model';
 import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
@@ -283,5 +284,115 @@ describe('FR-02 · purchase price, settlement costs and capital growth', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.fieldErrors?.purchasePrice).toBeDefined();
     expect(propertiesRepository.list()).toHaveLength(before);
+  });
+});
+
+describe('FR-02 · editing a property', () => {
+  const idle = IDLE_RESULT as ActionResult<unknown>;
+
+  function formOf(fields: Record<string, string>): FormData {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    return form;
+  }
+
+  // Each test edits a property of its own, so the seeded ones stay as the other
+  // suites expect them.
+  async function freshProperty(): Promise<Property> {
+    const result = await createPropertyAction(
+      idle,
+      formOf({ name: '21 Edit St', ownerEntityId: ENTITY_IDS.familyTrust, purchasePrice: '500,000' }),
+    );
+    if (!result.ok) throw new Error(`expected success, got: ${result.message}`);
+    return result.value as Property;
+  }
+
+  it('updates name, address, status and rental mode', async () => {
+    const property = await freshProperty();
+    const result = await updatePropertyAction(
+      idle,
+      formOf({
+        propertyId: property.id,
+        name: '21 Edit St, Sunnybank',
+        fullAddress: '21 Edit Street, Sunnybank QLD 4109',
+        status: 'vacant',
+        rentalMode: 'by-room',
+      }),
+    );
+
+    if (!result.ok) throw new Error(`expected success, got: ${result.message}`);
+    expect(propertiesRepository.find(property.id)).toMatchObject({
+      name: '21 Edit St, Sunnybank',
+      fullAddress: '21 Edit Street, Sunnybank QLD 4109',
+      status: 'vacant',
+      rentalMode: 'by-room',
+    });
+  });
+
+  it('leaves ownership and cost basis untouched', async () => {
+    const property = await freshProperty();
+    const result = await updatePropertyAction(
+      idle,
+      formOf({ propertyId: property.id, name: 'Renamed', fullAddress: 'Renamed address', status: 'own-home', rentalMode: 'not-rented' }),
+    );
+    expect(result.ok).toBe(true);
+
+    const stored = propertiesRepository.find(property.id);
+    expect(stored?.purchasePrice).toEqual(fromMajorUnits(500_000));
+    expect(stored?.ownershipLabel).toBe(property.ownershipLabel);
+    expect(stored?.holdingNote).toBe(property.holdingNote);
+    expect(stored?.consolidationMethodChosen).toBe(false);
+  });
+
+  it('records an audit entry naming what changed', async () => {
+    const property = await freshProperty();
+    const before = accessService.listAuditEvents().length;
+
+    const result = await updatePropertyAction(
+      idle,
+      formOf({ propertyId: property.id, name: 'Audit House', fullAddress: property.fullAddress, status: 'vacant', rentalMode: property.rentalMode }),
+    );
+    expect(result.ok).toBe(true);
+
+    const events = accessService.listAuditEvents();
+    expect(events).toHaveLength(before + 1);
+    const event = events.find((entry) => entry.summary === 'Property updated · Audit House');
+    expect(event).toBeDefined();
+    expect(event?.context).toContain('name: 21 Edit St → Audit House');
+    expect(event?.context).toContain('status: rented → vacant');
+    expect(event?.context).not.toContain('rentalMode');
+  });
+
+  it('rejects an empty name, marks the field and changes nothing', async () => {
+    const property = await freshProperty();
+    const before = accessService.listAuditEvents().length;
+    const result = await updatePropertyAction(
+      idle,
+      formOf({ propertyId: property.id, name: '  ', fullAddress: 'Somewhere', status: 'vacant', rentalMode: 'whole' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.fieldErrors?.name).toBeDefined();
+    expect(propertiesRepository.find(property.id)).toEqual(property);
+    expect(accessService.listAuditEvents()).toHaveLength(before);
+  });
+
+  it('rejects an unrecognised status and changes nothing', async () => {
+    const property = await freshProperty();
+    const result = await updatePropertyAction(
+      idle,
+      formOf({ propertyId: property.id, name: property.name, fullAddress: property.fullAddress, status: 'demolished', rentalMode: 'whole' }),
+    );
+
+    expect(result.ok).toBe(false);
+    expect(propertiesRepository.find(property.id)).toEqual(property);
+  });
+
+  it('refuses an unknown property', async () => {
+    const result = await updatePropertyAction(
+      idle,
+      formOf({ propertyId: 'prop-nope', name: 'X', fullAddress: 'Y', status: 'vacant', rentalMode: 'whole' }),
+    );
+    expect(result.ok).toBe(false);
   });
 });

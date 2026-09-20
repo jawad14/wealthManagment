@@ -14,6 +14,7 @@ import {
   type DocumentFilter,
   type DocumentLink,
   type DocumentRecord,
+  type DocumentVersion,
 } from './model';
 
 export interface DocumentView {
@@ -86,6 +87,41 @@ export const documentsService = {
       actor: accessService.resolveUserName(actor) ?? 'system',
       summary: `Document linked · ${record.filename}`,
       context: `Linked to ${link.label}`,
+    });
+    return updated;
+  },
+
+  /**
+   * Record a new version of a document (renewed policy, revised lease).
+   *
+   * Versions are additive — the earlier ones stay in the history untouched.
+   * When no size is given the new version carries the current size forward.
+   */
+  addVersion(input: { documentId: DocumentId; note?: string; sizeMb?: number; actor: UserId }): DocumentRecord {
+    const document = documentsService.require(input.documentId);
+    if (document.removedAt) throw new ValidationError('This document has been removed and cannot take a new version.');
+    if (input.sizeMb !== undefined && input.sizeMb <= 0) {
+      throw new ValidationError('Enter a file size greater than zero.', {
+        fieldErrors: { sizeMb: ['A file size must be greater than zero.'] },
+      });
+    }
+
+    const newVersion: DocumentVersion = {
+      version: document.versions.length + 1,
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: input.actor,
+      sizeBytes:
+        input.sizeMb === undefined ? currentSizeBytes(document) : Math.max(1, Math.round(input.sizeMb * 1_000_000)),
+      ...(input.note ? { note: input.note } : {}),
+    };
+
+    const updated = documentsRepository.update(document.id, { versions: [...document.versions, newVersion] });
+    if (!updated) throw new NotFoundError('Document', document.id);
+
+    accessService.record({
+      actor: accessService.resolveUserName(input.actor) ?? 'system',
+      summary: `Document version added · ${document.filename}`,
+      context: `v${newVersion.version}${newVersion.note ? ` · ${newVersion.note}` : ''} · earlier versions retained`,
     });
     return updated;
   },

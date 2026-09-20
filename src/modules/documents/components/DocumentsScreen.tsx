@@ -11,7 +11,7 @@ import { Card as PanelCard, CardBody, CardHeader } from '@/shared/components/Car
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { Stack, Sub, Toolbar } from '@/shared/components/Layout';
-import { linkDocumentAction, registerDocumentAction } from '../actions';
+import { addDocumentVersionAction, linkDocumentAction, registerDocumentAction } from '../actions';
 import { DOCUMENT_FILTER_LABELS, type DocumentFilter } from '../model';
 import type { DocumentView } from '../service';
 
@@ -40,7 +40,12 @@ export interface DocumentsScreenProps {
 /** FR-04 — the document register. */
 export function DocumentsScreen({ rowsByFilter, counts, linkTargets }: DocumentsScreenProps) {
   const [filter, setFilter] = useState<DocumentFilter>('all');
-  const [panel, setPanel] = useState<{ readonly kind: 'register' } | { readonly kind: 'link'; readonly view: DocumentView } | null>(null);
+  const [panel, setPanel] = useState<
+    | { readonly kind: 'register' }
+    | { readonly kind: 'link'; readonly view: DocumentView }
+    | { readonly kind: 'new-version'; readonly view: DocumentView }
+    | null
+  >(null);
   const close = (): void => setPanel(null);
 
   const columns: readonly DataTableColumn<DocumentView>[] = [
@@ -86,16 +91,22 @@ export function DocumentsScreen({ rowsByFilter, counts, linkTargets }: Documents
       header: '',
       mobileLabel: 'Action',
       align: 'right',
-      render: (row) =>
-        row.linkLabel === null ? (
-          <Button small onClick={() => setPanel({ kind: 'link', view: row })}>
-            Link to record
+      render: (row) => (
+        <>
+          {row.linkLabel === null ? (
+            <Button small onClick={() => setPanel({ kind: 'link', view: row })}>
+              Link to record
+            </Button>
+          ) : (
+            <Button small variant="ghost" onClick={() => setPanel({ kind: 'link', view: row })}>
+              Add link
+            </Button>
+          )}{' '}
+          <Button small variant="ghost" onClick={() => setPanel({ kind: 'new-version', view: row })}>
+            New version
           </Button>
-        ) : (
-          <Button small variant="ghost" onClick={() => setPanel({ kind: 'link', view: row })}>
-            Add link
-          </Button>
-        ),
+        </>
+      ),
     },
   ];
 
@@ -175,6 +186,39 @@ export function DocumentsScreen({ rowsByFilter, counts, linkTargets }: Documents
                     invalid={Boolean(firstError(fieldErrors, 'target'))}
                     hint={firstError(fieldErrors, 'target')}
                     options={[{ value: '', label: 'Choose a record…' }, ...linkTargets]}
+                  />
+                </FieldGrid>
+              )}
+            </ActionForm>
+          </CardBody>
+        </PanelCard>
+      ) : null}
+
+      {panel?.kind === 'new-version' ? (
+        <PanelCard>
+          <CardHeader
+            title={`New version · ${panel.view.record.filename}`}
+            aside={<Sub>Becomes v{panel.view.versionCount + 1} — earlier versions are kept</Sub>}
+          />
+          <CardBody>
+            <ActionForm
+              key={panel.view.record.id}
+              action={addDocumentVersionAction}
+              submitLabel="Record new version"
+              onCancel={close}
+              onSuccess={close}
+              hiddenFields={{ documentId: panel.view.record.id }}
+            >
+              {({ fieldErrors }) => (
+                <FieldGrid>
+                  <TextField
+                    id="version-note" name="note" label="Version note"
+                    placeholder="e.g. Annual renewal certificate"
+                  />
+                  <TextField
+                    id="version-size" name="sizeMb" label="File size (MB)" defaultValue="1.2"
+                    invalid={Boolean(firstError(fieldErrors, 'sizeMb'))}
+                    hint={firstError(fieldErrors, 'sizeMb')}
                   />
                 </FieldGrid>
               )}

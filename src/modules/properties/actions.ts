@@ -114,6 +114,63 @@ export async function addComponentAction(
 }
 
 /**
+ * Edit a property's descriptive details (FR-02).
+ *
+ * Only the name, address, status and rental mode change here. Ownership, cost
+ * basis and valuations have their own flows, so an edit can never move a figure.
+ */
+export async function updatePropertyAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction('Property updated', () => {
+    const propertyId = asId<'Property'>(requireString(form, 'propertyId', 'Property'));
+    const property = propertiesRepository.find(propertyId);
+    if (!property) throw new ValidationError('That property no longer exists.');
+
+    const name = readString(form, 'name');
+    if (name === undefined) {
+      throw new ValidationError('Name is required.', {
+        fieldErrors: { name: ['Enter a name, e.g. "166 Compton Rd, Woodridge".'] },
+      });
+    }
+    const fullAddress = readString(form, 'fullAddress');
+    if (fullAddress === undefined) {
+      throw new ValidationError('Address is required.', {
+        fieldErrors: { fullAddress: ['Enter the full address.'] },
+      });
+    }
+
+    // A missing choice keeps the stored value; an unrecognised one is rejected by readChoice.
+    const changes = {
+      name,
+      fullAddress,
+      status: readChoice(form, 'status', STATUSES) ?? property.status,
+      rentalMode: readChoice(form, 'rentalMode', MODES) ?? property.rentalMode,
+    };
+
+    const updated = propertiesRepository.update(propertyId, changes);
+    if (!updated) throw new ValidationError('That property no longer exists.');
+
+    const changed = (Object.keys(changes) as (keyof typeof changes)[]).filter(
+      (key) => property[key] !== changes[key],
+    );
+    accessService.record({
+      actor: accessService.getCurrentUser().name,
+      summary: `Property updated · ${updated.name}`,
+      context: changed.length
+        ? changed.map((key) => `${key}: ${property[key]} → ${changes[key]}`).join(' · ')
+        : 'No fields changed',
+    });
+    // The literal URL — see addComponentAction for why a pattern will not do.
+    revalidatePath(`/properties/${propertyId}`);
+    revalidate();
+    revalidatePath('/leases');
+    return updated;
+  });
+}
+
+/**
  * Add a property, together with the ownership interest that holds it.
  *
  * The owner is required: a property with no recorded ownership contributes
