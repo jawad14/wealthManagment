@@ -16,4 +16,7 @@ export const loansRepository = {
   /** Facilities secured by a property, whether solely or as part of a pool. */
   listSecuredBy: (propertyId: PropertyId): readonly Loan[] =>
     loans.where((loan) => loan.security.propertyIds.includes(propertyId)),
+  insert: (loan: Loan): Loan => loans.insert(loan),
+  /** Test isolation. */
+  reset: (): void => loans.reset(),
 };

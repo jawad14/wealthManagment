@@ -148,7 +148,8 @@ module: parse `FormData` → call the service → record an audit entry →
 reaches the client as an opaque digest, useless to someone filling in a form — so
 they return `ActionResult` with field-level errors instead.
 
-Still read-only: six of seven property-detail tabs, editing an existing loan, and
+Loans can be added from `/loans` (single-security or unsecured only). Still
+read-only: six of seven property-detail tabs, editing an existing loan, and
 editing an entity after creation.
 
 ## 6. Non-obvious things worth knowing
@@ -198,6 +199,7 @@ editing an entity after creation.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | Added "+ Add facility" on `/loans`: `loans/actions.ts` (`createLoanAction`), `loansRepository.insert`/`reset`, form in `LoansScreen` (now a client component), `tests/fr-03-loans.test.ts`. A new facility is `single`-secured or unsecured — pools cannot be created from the form. **Assumption:** with no statement yet, the principal/interest split is one month's simple interest on the opening balance, capped at the repayment (IO = all interest); it is a working figure, not the lender's. 162 tests. |
 | 2026-09-07 | Session 1: built from the design alone. 9 modules, 10 screens, 16 API routes, full documentation. Design verified byte-identical. |
 | 2026-09-08 | Session 4: wired every action button to a Server Action (17 stubs → 0). Implemented the two failing FR-05 criteria — charge generation on lease creation, early termination removing only *unearned* charges, and effective rent changes that never restate paid history. Added `ActionForm`, `ActionResult` and `FormData` parsing helpers. 137 tests. |
 | 2026-09-08 | Session 3: filled the seed out into a demonstration dataset — every section and filter now has content. Closed five documented divergences (obligations 23, documents 142, entities 6, unlinked 2, upcoming 7 items/$9,320). Headline figures unchanged and still fixture-tested. |

@@ -1,12 +1,19 @@
-import { Card, CardHeader } from '@/shared/components/Card';
+'use client';
+
+import { useState } from 'react';
+import { ActionForm, firstError } from '@/shared/components/ActionForm';
+import { Button } from '@/shared/components/Button';
+import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { Kpi, KpiGrid } from '@/shared/components/Kpi';
-import { Stack, Sub } from '@/shared/components/Layout';
+import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
+import { Stack, Sub, Toolbar } from '@/shared/components/Layout';
 import { formatMoney, formatPercent } from '@/shared/lib/money';
 import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
 import type { Available } from '@/shared/lib/result';
 import type { Money } from '@/shared/lib/money';
+import { createLoanAction } from '../actions';
 import { RATIO_UNAVAILABLE_LABELS, type Loan, type RatioUnavailableReason } from '../model';
 
 export interface LoanRow {
@@ -23,6 +30,9 @@ export interface LoansScreenProps {
   readonly collateralRangeLabel: string | null;
   readonly repayments: { readonly total: Money; readonly principal: Money; readonly interest: Money };
   readonly nextReview: { readonly on: string; readonly detail: string } | null;
+  readonly properties: readonly { readonly id: string; readonly name: string }[];
+  readonly entities: readonly { readonly id: string; readonly name: string }[];
+  readonly today: string;
 }
 
 /** Renders an LVR cell, or the reason it cannot be produced (BR-04). */
@@ -93,9 +103,106 @@ export function LoansScreen({
   collateralRangeLabel,
   repayments,
   nextReview,
+  properties,
+  entities,
+  today,
 }: LoansScreenProps) {
+  const [isCreating, setCreating] = useState(false);
+
   return (
     <Stack>
+      <Toolbar>
+        <Sub>Liabilities and receivables, each counted once</Sub>
+        <Button variant="primary" onClick={() => setCreating(true)}>
+          + Add facility
+        </Button>
+      </Toolbar>
+
+      {isCreating ? (
+        <Card>
+          <CardHeader title="Add facility / loan" aside={<Sub>Figures as shown on the lender&apos;s statement</Sub>} />
+          <CardBody>
+            <ActionForm
+              action={createLoanAction}
+              submitLabel="Add facility"
+              onCancel={() => setCreating(false)}
+              onSuccess={() => setCreating(false)}
+              footnote={
+                <Sub style={{ fontSize: 12 }}>
+                  A receivable is money owed to the portfolio: it is never added to debt or to an LVR (FR-11). The
+                  principal and interest split is a working figure until a statement is recorded.
+                </Sub>
+              }
+            >
+              {({ fieldErrors }) => (
+                <FieldGrid>
+                  <TextField id="loan-lender" name="lender" label="Lender" required placeholder="Commonwealth Bank" />
+                  <TextField
+                    id="loan-facility" name="facilityName" label="Facility name" required
+                    placeholder="Residential Variable Mortgage"
+                  />
+                  <SelectField
+                    id="loan-direction" name="direction" label="Direction" defaultValue="liability"
+                    options={[
+                      { value: 'liability', label: 'Liability · money owed' },
+                      { value: 'receivable', label: 'Receivable · money lent out' },
+                    ]}
+                  />
+                  <TextField
+                    id="loan-counterparty" name="counterpartyLabel" label="Borrower" required
+                    placeholder="Holdfast Family Trust"
+                  />
+                  <SelectField
+                    id="loan-entity" name="borrowerEntityId" label="Borrowing entity"
+                    options={[{ value: '', label: 'Not linked' }, ...entities.map((e) => ({ value: e.id, label: e.name }))]}
+                  />
+                  <TextField
+                    id="loan-balance" name="balance" label="Balance" required inputMode="decimal" placeholder="$450,000"
+                    invalid={Boolean(firstError(fieldErrors, 'balance'))}
+                    hint={firstError(fieldErrors, 'balance')}
+                  />
+                  <TextField
+                    id="loan-asof" name="balanceAsOf" label="Balance as of" type="date" required defaultValue={today}
+                    invalid={Boolean(firstError(fieldErrors, 'balanceAsOf'))}
+                    hint={firstError(fieldErrors, 'balanceAsOf')}
+                  />
+                  <TextField
+                    id="loan-rate" name="annualRate" label="Annual rate (%)" required inputMode="decimal" placeholder="5.85"
+                    invalid={Boolean(firstError(fieldErrors, 'annualRate'))}
+                    hint={firstError(fieldErrors, 'annualRate')}
+                  />
+                  <SelectField
+                    id="loan-rate-type" name="rateType" label="Rate type" defaultValue="variable"
+                    options={[
+                      { value: 'variable', label: 'Variable' },
+                      { value: 'fixed', label: 'Fixed' },
+                    ]}
+                  />
+                  <SelectField
+                    id="loan-repayment-type" name="repaymentType" label="Repayment type" defaultValue="P&I"
+                    options={[
+                      { value: 'P&I', label: 'Principal & interest' },
+                      { value: 'IO', label: 'Interest only' },
+                      { value: 'custom', label: 'Custom' },
+                    ]}
+                  />
+                  <TextField
+                    id="loan-monthly" name="monthlyRepayment" label="Monthly repayment" inputMode="decimal"
+                    placeholder="$2,650"
+                    invalid={Boolean(firstError(fieldErrors, 'monthlyRepayment'))}
+                    hint={firstError(fieldErrors, 'monthlyRepayment')}
+                  />
+                  <SelectField
+                    id="loan-security" name="securityPropertyId" label="Secured by"
+                    options={[{ value: '', label: 'Unsecured' }, ...properties.map((p) => ({ value: p.id, label: p.name }))]}
+                  />
+                </FieldGrid>
+              )}
+            </ActionForm>
+          </CardBody>
+        </Card>
+      ) : null}
+
       <KpiGrid>
         <Kpi
           accent

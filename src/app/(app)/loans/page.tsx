@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { resolveAsOfDate } from '@/shared/config/app-config';
+import { entitiesService } from '@/modules/entities/service';
+import { propertiesService } from '@/modules/properties/service';
 import { loansService } from '@/modules/loans/service';
 import { LoansScreen, type LoanRow } from '@/modules/loans/components/LoansScreen';
 import { formatMonthShort, toDate } from '@/shared/lib/dates';
@@ -41,6 +43,9 @@ export default function LoansPage() {
             }
           : null
       }
+      properties={propertiesService.list().map((p) => ({ id: p.id, name: p.name }))}
+      entities={entitiesService.listEntities().map((e) => ({ id: e.id, name: e.name }))}
+      today={asOf}
     />
   );
 }

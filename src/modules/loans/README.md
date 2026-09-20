@@ -16,6 +16,10 @@ ratios. Covers FR-03, FR-11 and BR-04.
   eligible valuation the denominator is incomplete, so it reports Unavailable
   rather than a flattering number.
 
+- **Adding a facility** (`actions.ts`) takes the rate as a percentage and stores a
+  fraction. Until a statement is recorded, the principal/interest split is a
+  working figure: one month's simple interest, capped at the repayment.
+
 **Owns** — `Loan`, `InterestRate`, `Repayment`, `LoanSecurity`,
 `DebtAllocationPolicy`.
 
@@ -25,4 +29,5 @@ ratios. Covers FR-03, FR-11 and BR-04.
 (per-property debt).
 
 **Not yet implemented** — amortisation schedules, rate-change history, offset
-account modelling, loan CRUD.
+account modelling, editing or closing a facility, creating a pooled facility
+from the form.
