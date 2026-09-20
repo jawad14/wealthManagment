@@ -3,10 +3,20 @@
  */
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { addMoney, formatMoney, money, negateMoney, sumMoney, type Money } from '@/shared/lib/money';
-import type { BankImportId, BankTransactionId, IsoDate, UserId } from '@/shared/types/common';
+import { asId, type BankImportId, type BankTransactionId, type IsoDate, type UserId } from '@/shared/types/common';
+import { isWithin, maxDate, minDate } from '@/shared/lib/dates';
+import { resolveAsOfDate } from '@/shared/config/app-config';
+import { randomUUID } from 'node:crypto';
 import { accessService } from '@/modules/access/service';
+import { propertiesService } from '@/modules/properties/service';
+import { leasesRepository } from '@/modules/leases/repository';
+import { leasesService } from '@/modules/leases/service';
 import { reconciliationRepository } from './repository';
+import { parseStatementCsv, type ParsedStatementRow } from './csv-parser';
 import {
+  NAME_MATCH_CONFIDENCE,
+  REFERENCE_MATCH_CONFIDENCE,
+  type MatchSuggestion,
   HIGH_CONFIDENCE_THRESHOLD,
   IMPORT_STAGE_LABELS,
   IMPORT_STAGE_ORDER,
@@ -20,7 +30,182 @@ import {
 
 export type TransactionFilter = 'all' | 'auto-matched' | 'needs-review' | 'unmatched' | 'confirmed';
 
+/** Whether `needle` appears in `haystack` as a whole token, so "166C-R1" does not match "166C-R1-P". */
+function containsToken(haystack: string, needle: string): boolean {
+  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(^|[^a-z0-9-])${escaped}($|[^a-z0-9-])`, 'i').test(haystack);
+}
+
+/** Duplicate detection compares date, amount and bank reference (FR-06). */
+function duplicateKey(date: IsoDate, amount: Money, reference: string | undefined, description: string): string {
+  // Banks and people write the same reference as "Ref 166C-R3" and "166C-R3".
+  // A row with no reference falls back to its narration.
+  const text = (reference ?? description).toLowerCase().replace(/^ref[\s:.#-]*/, '').replace(/\s+/g, ' ').trim();
+  return `${date}|${amount.cents}|${amount.currency}|${text}`;
+}
+
+/**
+ * Suggest what a statement row is. A suggestion is not a posting — this only
+ * decides what the reviewer is shown first.
+ *
+ * A lease is only considered when it was running on the day the money moved, so
+ * a former tenant's reference cannot claim a new receipt.
+ */
+function suggestMatch(row: ParsedStatementRow): MatchSuggestion | null {
+  const narration = `${row.description} ${row.reference ?? ''}`;
+
+  if (row.amount.cents > 0) {
+    const leases = leasesRepository.list().filter((lease) => isWithin(row.date, lease.startsOn, lease.endsOn));
+    const describe = (lease: (typeof leases)[number], confidence: number, detail: string): MatchSuggestion => ({
+      kind: 'rent',
+      label: `Rent · ${leasesRepository.findTenant(lease.tenantId)?.name ?? 'Unknown tenant'} · ${leasesService.propertyLabel(lease, 'short')}`,
+      detail,
+      confidence,
+      targetRef: lease.reference,
+      propertyId: lease.propertyId,
+    });
+
+    const byReference = leases.find((lease) => containsToken(narration, lease.reference));
+    if (byReference) return describe(byReference, REFERENCE_MATCH_CONFIDENCE, `Billing reference ${byReference.reference} quoted`);
+
+    const byName = leases.filter((lease) => {
+      const surname = leasesRepository.findTenant(lease.tenantId)?.name.split(/\s+/).pop() ?? '';
+      return surname.length >= 3 && containsToken(narration, surname);
+    });
+    const [named] = byName;
+    if (named) {
+      return describe(
+        named,
+        NAME_MATCH_CONFIDENCE,
+        byName.length > 1 ? `Tenant name only · ${byName.length} leases share it, check which` : 'Matched on tenant name only · no reference quoted',
+      );
+    }
+  }
+
+  const property = propertiesService.list().find((entry) => {
+    const shortName = entry.name.split(',')[0] ?? entry.name;
+    return containsToken(narration, shortName);
+  });
+  if (property) {
+    return {
+      kind: row.amount.cents < 0 ? 'expense' : 'unknown',
+      label: `${row.amount.cents < 0 ? 'Property expense' : 'Receipt'} · ${property.name}`,
+      detail: 'Matched on property name only',
+      confidence: NAME_MATCH_CONFIDENCE,
+      propertyId: property.id,
+    };
+  }
+  return null;
+}
+
 export const reconciliationService = {
+  /**
+   * Start a new import from CSV statement text.
+   *
+   * Rows already staged by an earlier import (same date, amount and reference)
+   * are skipped and counted, never staged twice. Everything else is staged with
+   * the matcher's suggestion; nothing here confirms or posts a row.
+   *
+   * The import opens at `match` even when duplicates were skipped: skipping is
+   * automatic and reported on the screen, and an import parked at `duplicates`
+   * could never be posted.
+   */
+  createImportFromCsv(input: {
+    readonly accountLabel: string;
+    readonly format: string;
+    readonly csvContent: string;
+    readonly actor: UserId;
+    /** The day the import is recorded against. Defaults to the platform's as-of date. */
+    readonly asOf?: IsoDate;
+  }): BankImport {
+    const accountLabel = input.accountLabel.trim();
+    if (!accountLabel) {
+      throw new ValidationError('Enter the account this statement came from.', {
+        fieldErrors: { accountLabel: ['An account name is required, e.g. "CBA Everyday Business".'] },
+      });
+    }
+    if (accountLabel.length > 80) {
+      throw new ValidationError('The account name is too long.', {
+        fieldErrors: { accountLabel: ['Keep the account name to 80 characters or fewer.'] },
+      });
+    }
+    if (input.format.trim().toUpperCase() !== 'CSV') {
+      throw new ValidationError(`"${input.format}" statements cannot be imported yet · only CSV is supported.`, {
+        fieldErrors: { format: ['Only CSV statements are supported.'] },
+      });
+    }
+
+    const parsed = parseStatementCsv(input.csvContent);
+
+    const existing = new Map<string, StagedTransaction>();
+    reconciliationRepository.listAllTransactions().forEach((txn) => {
+      existing.set(duplicateKey(txn.date, txn.amount, txn.rawReference, txn.rawDescription), txn);
+    });
+
+    const fresh: ParsedStatementRow[] = [];
+    const duplicateOf: StagedTransaction[] = [];
+    parsed.forEach((row) => {
+      const match = existing.get(duplicateKey(row.date, row.amount, row.reference, row.description));
+      if (match) duplicateOf.push(match);
+      else fresh.push(row);
+    });
+
+    if (fresh.length === 0) {
+      throw new ConflictError(
+        `Every row in this statement has already been imported · ${parsed.length} duplicate${
+          parsed.length === 1 ? '' : 's'
+        } skipped, nothing new to stage.`,
+      );
+    }
+
+    const firstDuplicate = duplicateOf[0];
+    const duplicatesFrom = firstDuplicate
+      ? reconciliationRepository.findImport(firstDuplicate.importId)?.importedOn
+      : undefined;
+
+    const importId = asId<'BankImport'>(`imp-${randomUUID()}`);
+    const record = reconciliationRepository.insertImport({
+      id: importId,
+      accountLabel,
+      importedOn: input.asOf ?? resolveAsOfDate(),
+      periodFrom: parsed.map((row) => row.date).reduce(minDate),
+      periodTo: parsed.map((row) => row.date).reduce(maxDate),
+      format: 'CSV',
+      stage: 'match',
+      duplicatesSkipped: duplicateOf.length,
+      ...(duplicatesFrom ? { duplicatesSkippedFromDate: duplicatesFrom } : {}),
+    });
+
+    let suggested = 0;
+    fresh.forEach((row) => {
+      const suggestion = suggestMatch(row);
+      if (suggestion) suggested += 1;
+      reconciliationRepository.insertTransaction({
+        id: asId<'BankTransaction'>(`txn-${randomUUID()}`),
+        importId,
+        date: row.date,
+        rawDescription: row.description,
+        ...(row.reference ? { rawReference: row.reference } : {}),
+        amount: row.amount,
+        suggestion,
+        state: !suggestion
+          ? 'unmatched'
+          : (suggestion.confidence ?? 0) >= HIGH_CONFIDENCE_THRESHOLD
+            ? 'auto-matched'
+            : 'needs-review',
+      });
+    });
+
+    accessService.record({
+      actor: accessService.resolveUserName(input.actor) ?? 'system',
+      summary: `Bank statement imported · ${fresh.length} row${fresh.length === 1 ? '' : 's'} staged`,
+      context: `${accountLabel} · ${record.periodFrom} to ${record.periodTo} · ${suggested} suggested · ${
+        fresh.length - suggested
+      } unmatched · ${duplicateOf.length} duplicate${duplicateOf.length === 1 ? '' : 's'} skipped`,
+    });
+    return record;
+  },
+
   /** The import the reconcile screen is working on. */
   currentImport(): BankImport | null {
     return reconciliationRepository.latestImport() ?? null;

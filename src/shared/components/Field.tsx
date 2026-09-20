@@ -1,6 +1,6 @@
 'use client';
 
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react';
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
 
 export interface FieldShellProps {
   readonly id: string;
@@ -54,6 +54,40 @@ export function SelectField({ id, label, hint, invalid, options, ...rest }: Sele
           </option>
         ))}
       </select>
+    </FieldShell>
+  );
+}
+
+export interface TextAreaFieldProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id' | 'className'> {
+  readonly id: string;
+  readonly label: ReactNode;
+  readonly hint?: ReactNode;
+  readonly invalid?: boolean;
+}
+
+/**
+ * Multi-line input. The design's `.field` rules style `input` and `select`
+ * only, so the control borrows the same tokens here rather than the ported CSS
+ * being edited to fit.
+ */
+export function TextAreaField({ id, label, hint, invalid, style, ...rest }: TextAreaFieldProps) {
+  return (
+    <FieldShell id={id} label={label} hint={hint} invalid={invalid}>
+      <textarea
+        id={id}
+        aria-invalid={invalid || undefined}
+        style={{
+          border: `1px solid ${invalid ? 'var(--bad)' : 'var(--line)'}`,
+          borderRadius: 8,
+          padding: '10px 12px',
+          background: 'var(--surface)',
+          color: 'var(--text)',
+          font: 'inherit',
+          resize: 'vertical',
+          ...style,
+        }}
+        {...rest}
+      />
     </FieldShell>
   );
 }

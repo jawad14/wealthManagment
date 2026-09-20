@@ -32,4 +32,9 @@ export const propertiesRepository = {
     ),
 
   listAllComponents: (): readonly PropertyComponent[] => components.list(),
+
+  addComponent: (component: PropertyComponent): PropertyComponent => components.insert(component),
+
+  /** Test isolation only. */
+  resetComponents: (): void => components.reset(),
 };

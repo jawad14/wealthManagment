@@ -11,7 +11,7 @@ import { Grid, Row, Stat, Sub } from '@/shared/components/Layout';
 import { Tabs } from '@/shared/components/Tabs';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
-import { addValuationAction } from '../actions';
+import { addComponentAction, addValuationAction } from '../actions';
 import { formatMoney, type Money } from '@/shared/lib/money';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
@@ -185,6 +185,8 @@ export function PropertyDetail({
 }: PropertyDetailProps) {
   const [tab, setTab] = useState<DetailTab>('rooms');
   const [isValuing, setValuing] = useState(false);
+  const [isAddingComponent, setAddingComponent] = useState(false);
+  const noun = componentNoun.toLowerCase();
   const activeLeases = rooms.filter((room) => room.state !== null).length;
 
   const columns: readonly DataTableColumn<RoomRow>[] = [
@@ -324,7 +326,50 @@ export function PropertyDetail({
       />
 
       {tab === 'rooms' ? (
-        <DataTable columns={columns} rows={rooms} rowKey={(row) => row.componentId} empty="No components recorded." />
+        <>
+          <CardBody style={{ borderBottom: '1px solid var(--line-2)' }}>
+            {isAddingComponent ? (
+              <ActionForm
+                action={addComponentAction}
+                submitLabel={`Add ${noun}`}
+                onCancel={() => setAddingComponent(false)}
+                onSuccess={() => setAddingComponent(false)}
+                // A new component has no tenant yet, so it starts vacant — without
+                // this, occupancy would count it as let.
+                hiddenFields={{ propertyId, isVacant: 'true' }}
+                footnote={
+                  <Sub style={{ fontSize: 12 }}>
+                    A {noun} tracks tenancies and occupancy only — it does not change this property&apos;s value.
+                  </Sub>
+                }
+              >
+                {({ fieldErrors }) => (
+                  <FieldGrid>
+                    <TextField
+                      id="comp-label" name="label" label="Label" required placeholder="Room 4"
+                      invalid={Boolean(firstError(fieldErrors, 'label'))}
+                      hint={firstError(fieldErrors, 'label')}
+                    />
+                    <SelectField
+                      id="comp-kind" name="kind" label="Kind" defaultValue="room"
+                      invalid={Boolean(firstError(fieldErrors, 'kind'))}
+                      hint={firstError(fieldErrors, 'kind')}
+                      options={[
+                        { value: 'room', label: 'Room' },
+                        { value: 'whole', label: 'Whole property' },
+                      ]}
+                    />
+                  </FieldGrid>
+                )}
+              </ActionForm>
+            ) : (
+              <Button small onClick={() => setAddingComponent(true)}>
+                + Add {noun}
+              </Button>
+            )}
+          </CardBody>
+          <DataTable columns={columns} rows={rooms} rowKey={(row) => row.componentId} empty="No components recorded." />
+        </>
       ) : tab === 'overview' ? (
         <CardBody>
           <Grid columns={4}>

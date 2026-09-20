@@ -120,6 +120,12 @@ export function isExcludedFromCashFlow(txn: StagedTransaction): boolean {
 /** Confidence at or above this is treated as auto-matched. */
 export const HIGH_CONFIDENCE_THRESHOLD = 0.6;
 
+/** The row quotes a lease's billing reference exactly — the strongest signal a statement carries. */
+export const REFERENCE_MATCH_CONFIDENCE = 0.9;
+
+/** The narration only names a tenant or a property. Plausible, but names repeat. */
+export const NAME_MATCH_CONFIDENCE = 0.6;
+
 export interface ImportSummary {
   readonly staged: number;
   readonly autoMatched: number;

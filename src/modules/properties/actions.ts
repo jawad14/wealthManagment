@@ -5,11 +5,13 @@ import { randomUUID } from 'node:crypto';
 import { asId } from '@/shared/types/common';
 import { fromMajorUnits } from '@/shared/lib/money';
 import { runAction, type ActionResult } from '@/shared/lib/action-result';
-import { readAmount, readChoice, readString, requireString } from '@/shared/lib/form-data';
+import { readAmount, readBoolean, readChoice, readString, requireString } from '@/shared/lib/form-data';
 import { ValidationError } from '@/shared/lib/errors';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 import { accessService } from '@/modules/access/service';
 import { entitiesRepository } from '@/modules/entities/repository';
 import { propertiesRepository } from './repository';
+import { propertiesService } from './service';
 import type { Property, PropertyStatus, RentalMode, Valuation, ValuationBasis } from './model';
 
 const BASES: readonly ValuationBasis[] = ['bank', 'agent-appraisal', 'purchase-price', 'at-cost'];
@@ -61,6 +63,52 @@ export async function addValuationAction(
       context: `${valuation.basis} · ${valuation.valuedOn} · confidence ${valuation.confidence}`,
     });
     revalidate();
+    return created;
+  });
+}
+
+/**
+ * Add a room or component to a property (FR-02, BR-02).
+ *
+ * A component is operational — it carries leases and occupancy but never a
+ * valuation, so adding one leaves the property's asset value untouched.
+ */
+export async function addComponentAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction('Component added', () => {
+    const propertyId = asId<'Property'>(requireString(form, 'propertyId', 'Property'));
+    const property = propertiesRepository.find(propertyId);
+    if (!property) throw new ValidationError('That property no longer exists.');
+
+    const label = readString(form, 'label');
+    if (label === undefined) {
+      throw new ValidationError('Label is required.', {
+        fieldErrors: { label: ['Enter a label, e.g. "Room 4".'] },
+      });
+    }
+
+    // A component that has just been added cannot have a tenant yet, and
+    // occupancy counts anything without `vacantSince` as let — so the form sends
+    // `isVacant` and the room starts out vacant rather than inflating "let".
+    const created = propertiesService.addComponent({
+      id: asId<'PropertyComponent'>(`comp-${randomUUID()}`),
+      propertyId,
+      kind: readChoice(form, 'kind', ['room', 'whole'] as const) ?? 'room',
+      label,
+      ...(readBoolean(form, 'isVacant') ? { vacantSince: resolveAsOfDate() } : {}),
+    });
+    accessService.record({
+      actor: accessService.getCurrentUser().name,
+      summary: `Component added · ${created.label}`,
+      context: property.name,
+    });
+    // The literal URL: a '[propertyId]' pattern needs the route-group path and a
+    // 'page' type to match, and silently revalidates nothing when it does not.
+    revalidatePath(`/properties/${propertyId}`);
+    revalidatePath('/properties');
+    revalidatePath('/leases');
     return created;
   });
 }

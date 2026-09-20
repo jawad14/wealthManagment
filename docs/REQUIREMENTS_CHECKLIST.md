@@ -103,8 +103,12 @@ Proration remains correctly surfaced as an unapproved policy rather than guessed
 | Suggested matches require confirmation | ✅ nothing posts without a human; confirmation now persists via a Server Action |
 | Disputed balances suppress collection reminders | ✅ `tests/uat-03-reminders.test.ts` |
 
-**Gaps** — **no CSV parsing** (the import is pre-staged); **no matching engine**
-(suggestions are seeded); no ledger posting (wizard step 5).
+| Import a bank CSV and detect duplicate imports | ✅ `tests/fr-06-csv-import.test.ts` — generic `Date, Amount, Description, Reference` layout; duplicates skipped on date + amount + reference |
+
+**Gaps** — the CSV layout is a generic one, **not a confirmed bank format** (§7);
+the matcher is a **heuristic** (billing reference 0.9, tenant/property name 0.6),
+not a matching engine; posting rolls into monthly cash flow only and creates no
+rent allocations or expenses.
 
 ### FR-07 · Shared bills and recoveries — **Done (read path)**
 > Allocate utilities or shared costs by approved fixed amount or percentage across

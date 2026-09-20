@@ -5,8 +5,10 @@ import { propertiesService } from '@/modules/properties/service';
 import { obligationsService } from '@/modules/obligations/service';
 import { resolveAsOfDate } from '@/shared/config/app-config';
 import { ImportScreen } from '@/modules/reconciliation/components/ImportScreen';
-import { formatDateLong, formatDateShort, toDate } from '@/shared/lib/dates';
+import { UploadStatementForm } from '@/modules/reconciliation/components/UploadStatementForm';
+import { formatDateLong, formatDateShort, startOfMonth, toDate } from '@/shared/lib/dates';
 import { Card, CardBody } from '@/shared/components/Card';
+import { Stack } from '@/shared/components/Layout';
 
 export const metadata: Metadata = { title: 'Bank import & matching · Holdfast' };
 
@@ -16,17 +18,25 @@ export default function BankImportPage() {
 
   if (!bankImport) {
     return (
-      <Card>
-        <CardBody>
-          <p className="sub" style={{ margin: 0 }}>
-            No bank import is in progress. Upload a statement to begin.
-          </p>
-        </CardBody>
-      </Card>
+      <Stack>
+        <Card>
+          <CardBody>
+            <p className="sub" style={{ margin: 0 }}>
+              No bank import is in progress. Upload a statement to begin.
+            </p>
+          </CardBody>
+        </Card>
+        <UploadStatementForm />
+      </Stack>
     );
   }
 
-  const periodLabel = `${toDate(bankImport.periodFrom).getUTCDate()}–${formatDateShort(bankImport.periodTo)} ${toDate(
+  // "1–31 Aug 2026" within a month; an uploaded statement may straddle two.
+  const sameMonth = startOfMonth(bankImport.periodFrom) === startOfMonth(bankImport.periodTo);
+  const periodStart = sameMonth
+    ? String(toDate(bankImport.periodFrom).getUTCDate())
+    : `${formatDateShort(bankImport.periodFrom)} `;
+  const periodLabel = `${periodStart}–${sameMonth ? '' : ' '}${formatDateShort(bankImport.periodTo)} ${toDate(
     bankImport.periodTo,
   ).getUTCFullYear()} · ${bankImport.format}`;
 

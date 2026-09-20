@@ -5,6 +5,7 @@ import { asId } from '@/shared/types/common';
 import { runAction, type ActionResult } from '@/shared/lib/action-result';
 import { readString, requireString } from '@/shared/lib/form-data';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/lib/errors';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 import { accessService } from '@/modules/access/service';
 import { reconciliationService } from './service';
 import { reconciliationRepository } from './repository';
@@ -128,6 +129,61 @@ export async function postImportToLedgerAction(
     revalidate();
     return result;
   });
+}
+
+/** Next.js caps a Server Action body at 1 MB; refuse earlier, with a message that says why. */
+const MAX_STATEMENT_BYTES = 900_000;
+
+/**
+ * Start a new import from an uploaded or pasted CSV statement (FR-06).
+ *
+ * A chosen file wins over the text box, so a leftover paste can never be
+ * imported in place of the file the person just picked.
+ */
+export async function uploadBankCsvAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction(
+    (created: { readonly staged: number; readonly duplicatesSkipped: number }) =>
+      `Statement imported · ${created.staged} row${created.staged === 1 ? '' : 's'} staged${
+        created.duplicatesSkipped > 0 ? ` · ${created.duplicatesSkipped} duplicates skipped` : ''
+      }`,
+    async () => {
+      const file = form.get('csvFile');
+      const upload = file instanceof File && file.size > 0 ? file : undefined;
+      if (upload && upload.size > MAX_STATEMENT_BYTES) {
+        throw new ValidationError('That file is too large to be a bank statement.', {
+          fieldErrors: { csvFile: ['Choose a CSV under 900 KB, or split the statement by month.'] },
+        });
+      }
+
+      const csvContent = upload ? await upload.text() : readString(form, 'csvContent');
+      if (!csvContent?.trim()) {
+        throw new ValidationError('Choose a CSV file or paste the statement text.', {
+          fieldErrors: { csvContent: ['Nothing to import yet.'] },
+        });
+      }
+      if (csvContent.length > MAX_STATEMENT_BYTES) {
+        throw new ValidationError('That statement is too large to import in one go.', {
+          fieldErrors: { csvContent: ['Split the statement by month and import each part.'] },
+        });
+      }
+
+      const created = reconciliationService.createImportFromCsv({
+        accountLabel: readString(form, 'accountLabel') ?? '',
+        format: 'CSV',
+        csvContent,
+        actor: accessService.getCurrentUser().id,
+        asOf: resolveAsOfDate(),
+      });
+      revalidate();
+      return {
+        ...created,
+        staged: reconciliationService.summarise(created.id).staged,
+      };
+    },
+  );
 }
 
 function requireCurrentImport() {

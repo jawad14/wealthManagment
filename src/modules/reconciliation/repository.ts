@@ -14,15 +14,22 @@ const cashFlow = createCollection<PostedCashFlowMonth>('reconciliation.cashFlow'
 export const reconciliationRepository = {
   listImports: (): readonly BankImport[] => imports.list(),
   findImport: (id: BankImportId): BankImport | undefined => imports.find(id),
-  /** The import currently being worked on — the most recent one. */
+  /**
+   * The import currently being worked on — the most recent one. Two imports on
+   * the same day are ordered by insertion, newest first (the sort is stable).
+   */
   latestImport: (): BankImport | undefined =>
-    [...imports.list()].sort((a, b) => b.importedOn.localeCompare(a.importedOn))[0],
+    [...imports.list()].reverse().sort((a, b) => b.importedOn.localeCompare(a.importedOn))[0],
+  insertImport: (record: BankImport): BankImport => imports.insert(record),
   updateImport: (id: BankImportId, changes: Partial<Omit<BankImport, 'id'>>): BankImport | undefined =>
     imports.update(id, changes),
 
   listTransactions: (importId: BankImportId): readonly StagedTransaction[] =>
     [...transactions.where((txn) => txn.importId === importId)].sort((a, b) => b.date.localeCompare(a.date)),
+  /** Every staged row across every import — what duplicate detection compares against. */
+  listAllTransactions: (): readonly StagedTransaction[] => transactions.list(),
   findTransaction: (id: BankTransactionId): StagedTransaction | undefined => transactions.find(id),
+  insertTransaction: (txn: StagedTransaction): StagedTransaction => transactions.insert(txn),
   updateTransaction: (
     id: BankTransactionId,
     changes: Partial<Omit<StagedTransaction, 'id'>>,

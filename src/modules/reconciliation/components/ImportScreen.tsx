@@ -1,16 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Banner } from '@/shared/components/Banner';
 import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Kpi, KpiGrid } from '@/shared/components/Kpi';
-import { Stack, Sub } from '@/shared/components/Layout';
+import { Button } from '@/shared/components/Button';
+import { Stack, Sub, Toolbar } from '@/shared/components/Layout';
 import { Stepper, type StepperStep } from '@/shared/components/Stepper';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { formatMoney } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import { StagedTransactionsTable } from './StagedTransactionsTable';
+import { UploadStatementForm } from './UploadStatementForm';
 import { allocateTransactionAction } from '../actions';
 import type { BankImport, ImportSummary, StagedTransaction } from '../model';
 
@@ -47,8 +49,31 @@ export function ImportScreen({
       ? ` ${summary.unmatched} unmatched row${summary.unmatched === 1 ? ' stays' : 's stay'} unposted until allocated.`
       : '';
 
+  // Null means "not chosen": the form then opens by itself once this import has
+  // nothing left to do, which is when the next statement is the obvious step.
+  const [uploadChoice, setUploadChoice] = useState<boolean | null>(null);
+  const uploading = uploadChoice ?? ((posted && readyToPostCount === 0) || summary.staged === 0);
+  // A row being allocated belongs to the import that was just replaced.
+  const closeUpload = useCallback(() => {
+    setUploadChoice(null);
+    setAllocating(null);
+  }, []);
+
   return (
     <Stack>
+      <Toolbar>
+        <Sub>
+          {bankImport.accountLabel} · {periodLabel}
+        </Sub>
+        <Button variant="primary" onClick={() => setUploadChoice(true)} disabled={uploading} aria-expanded={uploading}>
+          + Upload new statement
+        </Button>
+      </Toolbar>
+
+      {uploading ? (
+        <UploadStatementForm onCancel={() => setUploadChoice(false)} onSuccess={closeUpload} />
+      ) : null}
+
       <Card>
         <CardBody>
           <Stepper steps={steps} label="Import progress" />

@@ -15,7 +15,7 @@ code.
 | `shared-bills` | `SharedBill`, `AllocationAgreement`, `BillShare` | FR-07 | `properties`, `leases` | `/shared-bills` |
 | `expenses` | `Expense`, `ExpenseRevision`, `ExpenseAllocation` | FR-04 | `access`, `entities`, `properties` | `/expenses` |
 | `obligations` | `Obligation`, `ReminderPolicy`, `ReminderEvent` | FR-03, FR-08 | `access` | `/obligations` |
-| `reconciliation` | `BankImport`, `StagedTransaction`, `PostedCashFlowMonth` | FR-06, BR-03 | `access` | `/bank-import` |
+| `reconciliation` | `BankImport`, `StagedTransaction`, `PostedCashFlowMonth` | FR-06, BR-03 | `access`, `leases`, `properties` | `/bank-import` |
 | `documents` | `DocumentRecord`, `DocumentVersion`, `DocumentLink` | FR-04 | `access` | `/documents` |
 | `dashboard` | `PortfolioSnapshot` | FR-09, BR-01, BR-02, BR-03 | all of the above | `/dashboard`, `/explain/[metric]` |
 | `design-system` | reference data only | NFR-07 | — | `/design-system` |

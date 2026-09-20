@@ -5,7 +5,7 @@
  * `dashboard` module, not here — this module answers only questions about the
  * asset itself, which keeps the dependency graph acyclic.
  */
-import { NotFoundError } from '@/shared/lib/errors';
+import { NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { formatDateShort, formatMonthShort, monthsBetween, toDate } from '@/shared/lib/dates';
 import { STALE_VALUATION_MONTHS } from '@/shared/config/app-config';
 import type { IsoDate, PropertyId } from '@/shared/types/common';
@@ -15,6 +15,7 @@ import {
   isMarketBasis,
   VALUATION_BASIS_LABELS,
   VALUATION_BASIS_LONG_LABELS,
+  type ComponentKind,
   type Occupancy,
   type OwnershipGap,
   type Property,
@@ -103,6 +104,40 @@ export const propertiesService = {
 
   listComponents(propertyId: PropertyId): readonly PropertyComponent[] {
     return propertiesRepository.listComponents(propertyId);
+  },
+
+  /**
+   * Add a room or component to a property (FR-02, BR-02).
+   *
+   * A component is operational — it carries leases and occupancy but never a
+   * valuation — so this touches nothing that feeds net worth. Labels are how
+   * people tell rooms apart on a lease, so a duplicate is refused, and a
+   * property has at most one "whole property" component. A whole component may
+   * sit beside others — a granny flat next to the main dwelling is the case
+   * this exists for.
+   */
+  addComponent(input: {
+    readonly id: PropertyComponent['id'];
+    readonly propertyId: PropertyId;
+    readonly label: string;
+    readonly kind: ComponentKind;
+    readonly vacantSince?: IsoDate;
+  }): PropertyComponent {
+    const existing = propertiesRepository.listComponents(input.propertyId);
+
+    if (existing.some((component) => component.label.toLowerCase() === input.label.toLowerCase())) {
+      throw new ValidationError(`This property already has "${input.label}".`, {
+        fieldErrors: { label: ['Choose a label that is not already in use on this property.'] },
+      });
+    }
+    if (input.kind === 'whole' && existing.some((component) => component.kind === 'whole')) {
+      throw new ValidationError('This property already has a whole-property component.', {
+        fieldErrors: { kind: ['Only one "Whole property" component is allowed — add a room instead.'] },
+      });
+    }
+
+    const position = existing.reduce((max, component) => Math.max(max, component.position), 0) + 1;
+    return propertiesRepository.addComponent({ ...input, position });
   },
 
   /**
