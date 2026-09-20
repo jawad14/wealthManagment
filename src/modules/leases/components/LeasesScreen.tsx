@@ -6,8 +6,8 @@ import { Card } from '@/shared/components/Card';
 import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { FilterGroup } from '@/shared/components/FilterGroup';
-import { Grid, Stack, Toolbar } from '@/shared/components/Layout';
-import { formatMoney } from '@/shared/lib/money';
+import { Grid, Row, Stack, Toolbar } from '@/shared/components/Layout';
+import { formatMoney, type Money } from '@/shared/lib/money';
 import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
@@ -15,7 +15,7 @@ import { Card as PanelCard, CardBody, CardHeader } from '@/shared/components/Car
 import { FieldGrid, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { Sub } from '@/shared/components/Layout';
-import { changeRentAction, terminateLeaseAction } from '../actions';
+import { changeRentAction, recordRentPaymentAction, terminateLeaseAction } from '../actions';
 import { FREQUENCY_SUFFIX, type LeaseStatus } from '../model';
 import type { LeaseFilter, LeaseView } from '../service';
 import { NewLeaseForm, type NewLeaseFormProps } from './NewLeaseForm';
@@ -81,13 +81,23 @@ export interface LeasesScreenProps {
   readonly newLease: NewLeaseFormProps;
   readonly properties: readonly { readonly id: string; readonly name: string }[];
   readonly today: string;
+  /** Outstanding balance per lease id; positive when the tenant is in arrears. */
+  readonly outstandingByLease: Readonly<Record<string, Money>>;
 }
 
 /** Which lifecycle panel is open for the selected lease. */
-type LeasePanel = { readonly kind: 'terminate' | 'rent'; readonly view: LeaseView } | null;
+type LeasePanelKind = 'terminate' | 'rent' | 'payment';
+type LeasePanel = { readonly kind: LeasePanelKind; readonly view: LeaseView } | null;
+
+const PANEL_LABELS: Record<LeasePanelKind, string> = {
+  terminate: 'End lease early',
+  rent: 'Change rent',
+  payment: 'Record payment',
+};
+const PANEL_KINDS: readonly LeasePanelKind[] = ['terminate', 'rent', 'payment'];
 
 /** FR-05 — leases, tenants and the new-lease form. */
-export function LeasesScreen({ viewsByFilter, counts, newLease, today }: LeasesScreenProps) {
+export function LeasesScreen({ viewsByFilter, counts, newLease, today, outstandingByLease }: LeasesScreenProps) {
   const [filter, setFilter] = useState<LeaseFilter>('active');
   const [panel, setPanel] = useState<LeasePanel>(null);
   const [isCreating, setCreating] = useState(false);
@@ -106,9 +116,14 @@ export function LeasesScreen({ viewsByFilter, counts, newLease, today }: LeasesS
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => setCreating(true)}>
-          + New lease
-        </Button>
+        <Row>
+          <a className="btn sm" href="/api/export/leases" download>
+            Export CSV
+          </a>
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            + New lease
+          </Button>
+        </Row>
       </Toolbar>
 
       <Grid columns={2}>
@@ -129,13 +144,19 @@ export function LeasesScreen({ viewsByFilter, counts, newLease, today }: LeasesS
             <CardHeader
               title={`${panel.view.tenantName} · ${panel.view.lease.reference}`}
               aside={
-                <Button
-                  small
-                  variant="ghost"
-                  onClick={() => setPanel({ kind: panel.kind === 'rent' ? 'terminate' : 'rent', view: panel.view })}
-                >
-                  {panel.kind === 'rent' ? 'End lease early' : 'Change rent'}
-                </Button>
+                <Row>
+                  {PANEL_KINDS.map((kind) => (
+                    <Button
+                      key={kind}
+                      small
+                      variant="ghost"
+                      aria-pressed={panel.kind === kind}
+                      onClick={() => setPanel({ kind, view: panel.view })}
+                    >
+                      {PANEL_LABELS[kind]}
+                    </Button>
+                  ))}
+                </Row>
               }
             />
             <CardBody>
@@ -167,6 +188,44 @@ export function LeasesScreen({ viewsByFilter, counts, newLease, today }: LeasesS
                       />
                     </FieldGrid>
                   )}
+                </ActionForm>
+              ) : panel.kind === 'payment' ? (
+                <ActionForm
+                  key={panel.view.lease.id}
+                  action={recordRentPaymentAction}
+                  submitLabel="Record payment"
+                  onCancel={close}
+                  onSuccess={close}
+                  hiddenFields={{ leaseId: panel.view.lease.id }}
+                  footnote={
+                    <Sub style={{ fontSize: 12 }}>
+                      The payment settles the oldest unpaid charges first. Anything left over is held as credit.
+                    </Sub>
+                  }
+                >
+                  {({ fieldErrors }) => {
+                    const outstanding = outstandingByLease[panel.view.lease.id];
+                    const suggested = outstanding && outstanding.cents > 0 ? outstanding : panel.view.lease.rent;
+                    return (
+                      <FieldGrid>
+                        <TextField
+                          id="pay-amount" name="amount" label="Amount received" required
+                          defaultValue={(suggested.cents / 100).toFixed(2)}
+                          invalid={Boolean(firstError(fieldErrors, 'amount'))}
+                          hint={
+                            firstError(fieldErrors, 'amount') ??
+                            (outstanding && outstanding.cents > 0 ? `${formatMoney(outstanding)} outstanding` : undefined)
+                          }
+                        />
+                        <TextField
+                          id="pay-received" name="receivedOn" label="Date received" type="date" defaultValue={today} required
+                          invalid={Boolean(firstError(fieldErrors, 'receivedOn'))}
+                          hint={firstError(fieldErrors, 'receivedOn')}
+                        />
+                        <TextField id="pay-note" name="note" label="Note" placeholder="e.g. Bank transfer, cash" />
+                      </FieldGrid>
+                    );
+                  }}
                 </ActionForm>
               ) : (
                 <ActionForm

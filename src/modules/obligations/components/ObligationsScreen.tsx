@@ -78,6 +78,9 @@ export function ObligationsScreen({
           onChange={setFilter}
         />
         <Row>
+          <a className="btn sm" href="/api/export/obligations" download>
+            Export CSV
+          </a>
           <ActionForm
             action={runReminderDispatchAction}
             submitLabel="Run reminder dispatch"

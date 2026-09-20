@@ -38,6 +38,9 @@ export default function LeasesPage() {
       }}
       properties={propertiesService.list().map((property) => ({ id: property.id, name: property.name }))}
       today={asOf}
+      outstandingByLease={Object.fromEntries(
+        leasesService.list().map((lease) => [lease.id, leasesService.arrearsFor(lease.id, asOf).outstanding]),
+      )}
     />
   );
 }

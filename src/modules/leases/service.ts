@@ -4,8 +4,9 @@
 import { randomUUID } from 'node:crypto';
 import { ConflictError, NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { addDays, addMonths, daysBetween, isBefore } from '@/shared/lib/dates';
-import { addMoney, money, scaleMoney, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
+import { addMoney, formatMoney, money, scaleMoney, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
 import { asId, type IsoDate, type LeaseId, type PropertyId, type RentChargeId, type UserId } from '@/shared/types/common';
+import { accessService } from '@/modules/access/service';
 import { propertiesService } from '@/modules/properties/service';
 import { leasesRepository } from './repository';
 import {
@@ -280,6 +281,79 @@ export const leasesService = {
       ...(input.bankTransactionId ? { bankTransactionId: input.bankTransactionId } : {}),
       ...(input.note ? { note: input.note } : {}),
     });
+  },
+
+  /**
+   * Record a rent payment against a lease, oldest debt first (FR-05, BR-05).
+   *
+   * The payment settles unpaid charges in `dueOn` order. Anything left once
+   * every charge is settled stays on the last charge as an over-allocation,
+   * which `arrearsFor` reports as "paid ahead" — money received is never dropped.
+   */
+  allocatePaymentToLease(input: {
+    readonly leaseId: LeaseId;
+    readonly amount: Money;
+    readonly receivedOn: IsoDate;
+    readonly note?: string;
+    readonly actor: UserId;
+  }): { readonly chargesSettled: number; readonly remainingBalance: Money } {
+    const lease = leasesService.require(input.leaseId);
+    if (input.amount.cents <= 0) {
+      throw new ValidationError('Enter an amount greater than zero.', {
+        fieldErrors: { amount: ['A payment must be greater than zero.'] },
+      });
+    }
+
+    const charges = [...leasesRepository.listCharges(input.leaseId)].sort((a, b) => a.dueOn.localeCompare(b.dueOn));
+    if (charges.length === 0) {
+      throw new ValidationError('This lease has no charges to record a payment against.');
+    }
+
+    const unpaid = charges
+      .map((charge) => ({
+        charge,
+        owing: charge.amount.cents - sumMoney(leasesRepository.listAllocations(charge.id).map((a) => a.amount)).cents,
+      }))
+      .filter((entry) => entry.owing > 0);
+
+    const currency = input.amount.currency;
+    let left = input.amount.cents;
+    let chargesSettled = 0;
+
+    for (const [index, entry] of unpaid.entries()) {
+      if (left <= 0) break;
+      const isLast = index === unpaid.length - 1;
+      // The last unpaid charge absorbs any excess, so the lease shows as paid ahead.
+      const applied = isLast ? left : Math.min(left, entry.owing);
+      leasesService.recordReceipt({
+        chargeId: entry.charge.id,
+        amount: money(applied, currency),
+        receivedOn: input.receivedOn,
+        ...(input.note ? { note: input.note } : {}),
+      });
+      if (applied >= entry.owing) chargesSettled += 1;
+      left -= applied;
+    }
+
+    if (unpaid.length === 0) {
+      // Nothing owing at all: the whole payment is credit on the latest charge.
+      leasesService.recordReceipt({
+        chargeId: charges[charges.length - 1]!.id,
+        amount: input.amount,
+        receivedOn: input.receivedOn,
+        ...(input.note ? { note: input.note } : {}),
+      });
+    }
+
+    const remainingBalance = leasesService.arrearsFor(input.leaseId, input.receivedOn).outstanding;
+
+    accessService.record({
+      actor: accessService.requireUser(input.actor).name,
+      summary: `Rent payment recorded · ${lease.reference}`,
+      context: `${formatMoney(input.amount)} received ${input.receivedOn} · ${chargesSettled} charge${chargesSettled === 1 ? '' : 's'} settled · ${formatMoney(remainingBalance)} outstanding`,
+    });
+
+    return { chargesSettled, remainingBalance };
   },
 
   /**

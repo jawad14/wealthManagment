@@ -6,6 +6,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import { asId } from '@/shared/types/common';
+import { accessApi } from '@/modules/access/api';
 import { accessService } from '@/modules/access/service';
 import { USER_IDS } from '@/modules/access/data/seed';
 import { PROPERTY_IDS } from '@/modules/entities/data/seed';
@@ -104,6 +105,31 @@ describe('NFR-01 / UAT-04 · permission enforcement', () => {
         accessService.filterProperties(scope, propertiesService.list()).map((property) => property.id).sort(),
       ).toEqual([PROPERTY_IDS.bentonSt, PROPERTY_IDS.comptonRd].sort());
       expect(() => accessService.guard('portfolio.totals.read')).toThrow(ForbiddenError);
+    });
+
+    it('refuses the accountant the access screen — no people, no audit log, no inviting', () => {
+      accessService.switchUser(USER_IDS.accountant);
+
+      expect(() => accessApi.getOverview()).toThrow(ForbiddenError);
+      expect(() => accessApi.listAuditEvents({})).toThrow(ForbiddenError);
+    });
+
+    it('shows the technical operator the audit log only', () => {
+      accessService.switchUser(USER_IDS.operator);
+      const overview = accessApi.getOverview();
+
+      expect(overview.auditEvents.length).toBeGreaterThan(0);
+      expect(overview.people).toEqual([]);
+      expect(overview.continuity).toBeNull();
+      expect(overview.canInvite).toBe(false);
+    });
+
+    it('lets the portfolio owner see everything and invite', () => {
+      const overview = accessApi.getOverview();
+
+      expect(overview.people.length).toBeGreaterThan(0);
+      expect(overview.auditEvents.length).toBeGreaterThan(0);
+      expect(overview.canInvite).toBe(true);
     });
 
     it('rejects an unknown user and leaves the active user unchanged', () => {

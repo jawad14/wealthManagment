@@ -33,7 +33,7 @@ export interface ExportResult {
 }
 
 /** Escape a value for CSV: quote it and double any embedded quotes. */
-function csvCell(value: string): string {
+export function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 

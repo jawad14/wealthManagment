@@ -4,7 +4,14 @@
  * Acceptance: "A fortnightly lease generates the agreed due dates; an early
  * termination removes only unearned future charges and leaves receipts intact."
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Actions call revalidatePath, which needs a request scope a unit test lacks.
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+
+import { recordRentPaymentAction } from '@/modules/leases/actions';
+import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
+import { CURRENT_USER_ID } from '@/modules/access/data/seed';
 import { leasesService } from '@/modules/leases/service';
 import { leasesRepository } from '@/modules/leases/repository';
 import { LEASE_IDS } from '@/modules/leases/data/seed';
@@ -148,5 +155,69 @@ describe('FR-05 · effective rent changes', () => {
     expect(() =>
       leasesService.changeRent({ leaseId: LEASE_IDS.chenR2, newRent: fromMajorUnits(360), effectiveFrom: '2020-01-01' }),
     ).toThrow(ValidationError);
+  });
+});
+
+describe('FR-05 · recording a rent payment', () => {
+  const idle = IDLE_RESULT as ActionResult<unknown>;
+  const formOf = (fields: Record<string, string>): FormData => {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    return form;
+  };
+
+  it('allocates the payment to the oldest unpaid charge and reduces arrears', async () => {
+    // Patel owes $690 on the 28 Aug charge; add a later unpaid charge behind it.
+    const oldest = asId<'RentCharge'>('chg-patel-0828');
+    const later = leasesRepository.insertCharge({
+      id: asId<'RentCharge'>('chg-patel-0904'),
+      leaseId: LEASE_IDS.patelBenton,
+      dueOn: '2026-09-04',
+      amount: fromMajorUnits(1_380),
+    });
+    const before = leasesService.arrearsFor(LEASE_IDS.patelBenton, AS_OF).outstanding.cents;
+    expect(before).toBe(fromMajorUnits(690 + 1_380).cents);
+
+    const result = await recordRentPaymentAction(
+      idle,
+      formOf({ leaseId: LEASE_IDS.patelBenton, amount: '$500.00', receivedOn: AS_OF, note: 'Bank transfer' }),
+    );
+
+    expect(result.ok).toBe(true);
+    // All of it went to the oldest charge; the later one is untouched.
+    const onOldest = leasesRepository.listAllocations(oldest);
+    expect(onOldest[onOldest.length - 1]?.amount.cents).toBe(fromMajorUnits(500).cents);
+    expect(leasesRepository.listAllocations(later.id)).toHaveLength(0);
+    expect(leasesService.arrearsFor(LEASE_IDS.patelBenton, AS_OF).outstanding.cents).toBe(
+      before - fromMajorUnits(500).cents,
+    );
+  });
+
+  it('spills across charges oldest first and reports what was settled', () => {
+    const later = leasesRepository.insertCharge({
+      id: asId<'RentCharge'>('chg-patel-0904'),
+      leaseId: LEASE_IDS.patelBenton,
+      dueOn: '2026-09-04',
+      amount: fromMajorUnits(1_380),
+    });
+
+    const result = leasesService.allocatePaymentToLease({
+      leaseId: LEASE_IDS.patelBenton,
+      amount: fromMajorUnits(1_000),
+      receivedOn: AS_OF,
+      actor: CURRENT_USER_ID,
+    });
+
+    expect(result.chargesSettled).toBe(1);
+    expect(leasesRepository.listAllocations(later.id)[0]?.amount.cents).toBe(fromMajorUnits(310).cents);
+    expect(result.remainingBalance.cents).toBe(fromMajorUnits(1_070).cents);
+  });
+
+  it('rejects a zero amount with a field error rather than throwing', async () => {
+    const result = await recordRentPaymentAction(
+      idle,
+      formOf({ leaseId: LEASE_IDS.patelBenton, amount: '0', receivedOn: AS_OF }),
+    );
+    expect(result.ok).toBe(false);
   });
 });

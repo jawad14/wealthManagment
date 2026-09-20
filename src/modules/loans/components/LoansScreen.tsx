@@ -8,7 +8,7 @@ import { Chip } from '@/shared/components/Chip';
 import { DataTable, CellMain, CellSub, type DataTableColumn } from '@/shared/components/DataTable';
 import { Kpi, KpiGrid } from '@/shared/components/Kpi';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
-import { Stack, Sub, Toolbar } from '@/shared/components/Layout';
+import { Row, Stack, Sub, Toolbar } from '@/shared/components/Layout';
 import { formatMoney, formatPercent } from '@/shared/lib/money';
 import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
 import type { Available } from '@/shared/lib/result';
@@ -113,9 +113,14 @@ export function LoansScreen({
     <Stack>
       <Toolbar>
         <Sub>Liabilities and receivables, each counted once</Sub>
-        <Button variant="primary" onClick={() => setCreating(true)}>
-          + Add facility
-        </Button>
+        <Row>
+          <a className="btn sm" href="/api/export/loans" download>
+            Export CSV
+          </a>
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            + Add facility
+          </Button>
+        </Row>
       </Toolbar>
 
       {isCreating ? (

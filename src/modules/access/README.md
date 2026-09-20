@@ -25,6 +25,13 @@ read the access repository directly.
 | `api.ts` | Handlers used by `src/app/api/access/*` |
 | `components/` | Presentation for the Access & audit screen |
 
+**Who may open the screen** — `accessApi.getOverview` refuses anyone holding
+neither `access.read` nor `audit.read`. With `audit.read` alone (technical
+operator) it returns the audit log and nothing else. Inviting needs
+`access.write`; the screen hides the form from everyone else and `inviteAction`
+refuses them regardless. `ROLE_SUMMARIES` in `model.ts` is the plain-words
+description of each role shown while granting access.
+
 **Test-persona switcher** — `accessService.switchUser` / `switchUserAction` change
 who `getCurrentUser()` and `guard()` resolve to, driven from the top bar avatar
 (`src/shared/shell/UserMenu.tsx`). The active id is process-wide, needs no

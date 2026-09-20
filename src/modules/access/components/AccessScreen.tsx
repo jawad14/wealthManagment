@@ -12,7 +12,7 @@ import { Timeline, type TimelineEntry } from '@/shared/components/Timeline';
 import { inviteAction } from '../actions';
 import { formatDateLong } from '@/shared/lib/dates';
 import type { AccessRow } from '../service';
-import type { ContinuityPosture } from '../model';
+import { ROLE_SUMMARIES, type AccessRole, type ContinuityPosture } from '../model';
 
 const columns: readonly DataTableColumn<AccessRow>[] = [
   {
@@ -63,13 +63,26 @@ const columns: readonly DataTableColumn<AccessRow>[] = [
 export interface AccessScreenProps {
   readonly people: readonly AccessRow[];
   readonly auditEntries: readonly TimelineEntry[];
-  readonly continuity: ContinuityPosture;
+  readonly continuity: ContinuityPosture | null;
   readonly properties: readonly { readonly id: string; readonly name: string }[];
+  readonly canSeePeople: boolean;
+  readonly canSeeAudit: boolean;
+  /** Presentation only — `inviteAction` refuses a caller without `access.write`. */
+  readonly canInvite: boolean;
 }
 
 /** NFR-01, NFR-03 — access control, audit trail and continuity posture. */
-export function AccessScreen({ people, auditEntries, continuity, properties }: AccessScreenProps) {
+export function AccessScreen({
+  people,
+  auditEntries,
+  continuity,
+  properties,
+  canSeePeople,
+  canSeeAudit,
+  canInvite,
+}: AccessScreenProps) {
   const [isInviting, setInviting] = useState(false);
+  const [role, setRole] = useState<AccessRole | ''>('');
 
   return (
     <Stack>
@@ -78,19 +91,29 @@ export function AccessScreen({ people, auditEntries, continuity, properties }: A
           <CardHeader
             title="People with access"
             aside={
-              <Button small variant="primary" onClick={() => setInviting((open) => !open)}>
-                {isInviting ? 'Close' : 'Invite'}
-              </Button>
+              canInvite ? (
+                <Button small variant="primary" onClick={() => setInviting((open) => !open)}>
+                  {isInviting ? 'Close' : 'Invite'}
+                </Button>
+              ) : (
+                <Sub>Only the portfolio owner can grant access</Sub>
+              )
             }
           />
 
-          {isInviting ? (
+          {canInvite && isInviting ? (
             <CardBody style={{ borderBottom: '1px solid var(--line-2)' }}>
               <ActionForm
                 action={inviteAction}
                 submitLabel="Send invitation"
-                onCancel={() => setInviting(false)}
-                onSuccess={() => setInviting(false)}
+                onCancel={() => {
+                  setInviting(false);
+                  setRole('');
+                }}
+                onSuccess={() => {
+                  setInviting(false);
+                  setRole('');
+                }}
                 footnote={
                   <Sub style={{ fontSize: 12 }}>
                     Grants start restricted. Choose the properties this person may reach — leaving none selected grants
@@ -112,8 +135,13 @@ export function AccessScreen({ people, auditEntries, continuity, properties }: A
                     />
                     <SelectField
                       id="inv-role" name="role" label="Role" required
+                      value={role}
+                      onChange={(event) => setRole(event.target.value as AccessRole | '')}
                       invalid={Boolean(firstError(fieldErrors, 'role'))}
-                      hint={firstError(fieldErrors, 'role')}
+                      hint={
+                        firstError(fieldErrors, 'role') ??
+                        (role ? ROLE_SUMMARIES[role] : 'The role decides what this person can do')
+                      }
                       options={[
                         { value: '', label: 'Choose a role…' },
                         { value: 'operations-delegate', label: 'Operations delegate' },
@@ -143,33 +171,45 @@ export function AccessScreen({ people, auditEntries, continuity, properties }: A
             </CardBody>
           ) : null}
 
-          <DataTable columns={columns} rows={people} rowKey={(row) => row.grant.id} empty="Nobody has access yet." />
+          {canSeePeople ? (
+            <DataTable columns={columns} rows={people} rowKey={(row) => row.grant.id} empty="Nobody has access yet." />
+          ) : (
+            <CardBody>
+              <Sub>Your role does not include seeing who has access.</Sub>
+            </CardBody>
+          )}
         </Card>
 
         <Card>
-          <CardHeader title="Audit log" aside={<a href="#export">Export</a>} />
+          <CardHeader title="Audit log" aside={canSeeAudit ? <a href="#export">Export</a> : null} />
           <CardBody>
-            <Timeline entries={auditEntries} />
+            {canSeeAudit ? (
+              <Timeline entries={auditEntries} />
+            ) : (
+              <Sub>Your role does not include the audit log.</Sub>
+            )}
           </CardBody>
         </Card>
       </Grid>
 
-      <Card>
-        <CardHeader title="Emergency access & continuity" aside={<Sub>Explicit, time-limited, audited</Sub>} />
-        <CardBody className="grid g3">
-          <Stat
-            label="Nominated emergency contact"
-            value={continuity.emergencyContactName}
-            meta={continuity.emergencyContactNote}
-          />
-          <Stat
-            label="Continuity instructions"
-            value={`Last reviewed ${formatDateLong(continuity.instructionsReviewedOn)}`}
-            meta={continuity.instructionsNote}
-          />
-          <Stat label="Backups" value={continuity.backupsSummary} meta={continuity.backupsNote} />
-        </CardBody>
-      </Card>
+      {continuity ? (
+        <Card>
+          <CardHeader title="Emergency access & continuity" aside={<Sub>Explicit, time-limited, audited</Sub>} />
+          <CardBody className="grid g3">
+            <Stat
+              label="Nominated emergency contact"
+              value={continuity.emergencyContactName}
+              meta={continuity.emergencyContactNote}
+            />
+            <Stat
+              label="Continuity instructions"
+              value={`Last reviewed ${formatDateLong(continuity.instructionsReviewedOn)}`}
+              meta={continuity.instructionsNote}
+            />
+            <Stat label="Backups" value={continuity.backupsSummary} meta={continuity.backupsNote} />
+          </CardBody>
+        </Card>
+      ) : null}
     </Stack>
   );
 }

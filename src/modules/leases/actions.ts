@@ -125,6 +125,37 @@ export async function terminateLeaseAction(
   );
 }
 
+/** Record a rent receipt, settling the oldest unpaid charges first (FR-05, BR-05). */
+export async function recordRentPaymentAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction(
+    (result) =>
+      `Payment recorded · ${result.chargesSettled} charge${result.chargesSettled === 1 ? '' : 's'} settled`,
+    () => {
+      const amount = readAmount(form, 'amount');
+      if (amount === undefined || amount <= 0) {
+        throw new ValidationError('Enter an amount greater than zero.', {
+          fieldErrors: { amount: ['A payment must be greater than zero.'] },
+        });
+      }
+
+      const note = readString(form, 'note');
+      const result = leasesService.allocatePaymentToLease({
+        leaseId: asId<'Lease'>(requireString(form, 'leaseId', 'Lease')),
+        amount: fromMajorUnits(amount),
+        receivedOn: requireString(form, 'receivedOn', 'Date received'),
+        ...(note ? { note } : {}),
+        actor: accessService.getCurrentUser().id,
+      });
+
+      revalidate();
+      return result;
+    },
+  );
+}
+
 /** Reprice future unpaid charges from an effective date (FR-05). */
 export async function changeRentAction(
   _previous: ActionResult<unknown>,

@@ -21,6 +21,19 @@ export const ROLE_LABELS: Record<AccessRole, string> = {
   'technical-operator': 'Technical operator',
 };
 
+/**
+ * What each role may do, in plain words. Shown when granting access so the
+ * choice is informed; `permissions.ts` remains the enforcement.
+ */
+export const ROLE_SUMMARIES: Record<AccessRole, string> = {
+  'portfolio-owner': 'Everything, including whole-portfolio totals and granting access.',
+  'operations-delegate':
+    'Bills, rent tasks, expenses and documents on the chosen properties. No portfolio totals, no granting access.',
+  'family-contributor': 'Assigned tasks only. No properties, totals, exports or granting access.',
+  'accountant-readonly': 'Read-only records and exports until the expiry date. No edits, no granting access.',
+  'technical-operator': 'Audit log only. No business data.',
+};
+
 export type MfaState = 'on' | 'not-required';
 
 export interface User {

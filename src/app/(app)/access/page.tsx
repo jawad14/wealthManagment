@@ -28,7 +28,15 @@ function accessView() {
       people={overview.people}
       auditEntries={auditEntries}
       continuity={overview.continuity}
-      properties={propertiesService.list().map((property) => ({ id: property.id, name: property.name }))}
+      canSeePeople={overview.canSeePeople}
+      canSeeAudit={overview.canSeeAudit}
+      canInvite={overview.canInvite}
+      // The property picker only serves the invite form, so nobody else receives the list.
+      properties={
+        overview.canInvite
+          ? propertiesService.list().map((property) => ({ id: property.id, name: property.name }))
+          : []
+      }
     />
   );
 }

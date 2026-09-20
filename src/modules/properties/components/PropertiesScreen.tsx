@@ -6,7 +6,7 @@ import { FilterGroup } from '@/shared/components/FilterGroup';
 import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
-import { Grid, Stack, Sub, Toolbar } from '@/shared/components/Layout';
+import { Grid, Row, Stack, Sub, Toolbar } from '@/shared/components/Layout';
 import { PropertyCard, type PropertyCardProps } from './PropertyCard';
 import { createPropertyAction } from '../actions';
 import type { PropertyFilter } from '../service';
@@ -46,9 +46,14 @@ export function PropertiesScreen({ cardsByFilter, counts, entities, today }: Pro
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => setCreating(true)}>
-          + Add property
-        </Button>
+        <Row>
+          <a className="btn sm" href="/api/export/properties" download>
+            Export CSV
+          </a>
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            + Add property
+          </Button>
+        </Row>
       </Toolbar>
 
       {isCreating ? (
