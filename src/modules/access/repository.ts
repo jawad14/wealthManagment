@@ -10,7 +10,21 @@ const users = createCollection<User>('access.users', seedUsers);
 const grants = createCollection<AccessGrant>('access.grants', seedAccessGrants);
 const auditEvents = createCollection<AuditEvent>('access.audit', seedAuditEvents);
 
+/**
+ * The active test persona. Cached on globalThis for the same reason collections
+ * are: a dev-mode hot reload must not silently sign the tester back in as the
+ * owner. Process-wide, not per-browser — a real session replaces this.
+ */
+interface GlobalWithActiveUser {
+  __holdfastActiveUserId__?: UserId;
+}
+const globalRef = globalThis as unknown as GlobalWithActiveUser;
+
 export const accessRepository = {
+  getActiveUserId: (): UserId | undefined => globalRef.__holdfastActiveUserId__,
+  setActiveUserId: (id: UserId): void => {
+    globalRef.__holdfastActiveUserId__ = id;
+  },
   listUsers: (): readonly User[] => users.list(),
   findUser: (id: UserId): User | undefined => users.find(id),
   insertUser: (user: User): User => users.insert(user),

@@ -18,6 +18,7 @@ code.
 | `reconciliation` | `BankImport`, `StagedTransaction`, `PostedCashFlowMonth` | FR-06, BR-03 | `access`, `leases`, `properties` | `/bank-import` |
 | `documents` | `DocumentRecord`, `DocumentVersion`, `DocumentLink` | FR-04 | `access` | `/documents` |
 | `dashboard` | `PortfolioSnapshot` | FR-09, BR-01, BR-02, BR-03 | all of the above | `/dashboard`, `/explain/[metric]` |
+| `search` | nothing — read model; wire types in `shared/types/search.ts` | FR-09, NFR-01 | `access`, `properties`, `leases`, `obligations`, `loans`, `documents` | top bar · `/api/search` |
 | `design-system` | reference data only | NFR-07 | — | `/design-system` |
 
 ## Who owns which concept
@@ -46,6 +47,7 @@ code.
 | What sits behind a headline total | `dashboard/explain.ts` (FR-09 drill-down) |
 | Permission-filtered CSV export | `dashboard/exports.ts` |
 | Reminder idempotency | `obligations` (`buildDispatchKey`) |
+| What the top-bar search matches, and who may see it | `search` |
 | Net worth, assets, liabilities | `dashboard` |
 | Per-entity consolidated position | `dashboard` |
 

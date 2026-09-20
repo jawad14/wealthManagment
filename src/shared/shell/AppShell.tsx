@@ -28,6 +28,9 @@ export function AppShell({
   asOfDate,
   unreadNotifications,
   currentUserInitials,
+  currentUserRoleLabel,
+  personas,
+  switchUserAction,
 }: AppShellProps) {
   return (
     <NavigationProvider>
@@ -48,6 +51,10 @@ export function AppShell({
               asOfDate={asOfDate}
               unreadNotifications={unreadNotifications}
               currentUserInitials={currentUserInitials}
+              currentUserName={currentUserName}
+              currentUserRoleLabel={currentUserRoleLabel}
+              personas={personas}
+              switchUserAction={switchUserAction}
             />
             <div className="content">
               <section className="view active">{children}</section>

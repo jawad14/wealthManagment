@@ -25,6 +25,12 @@ read the access repository directly.
 | `api.ts` | Handlers used by `src/app/api/access/*` |
 | `components/` | Presentation for the Access & audit screen |
 
+**Test-persona switcher** — `accessService.switchUser` / `switchUserAction` change
+who `getCurrentUser()` and `guard()` resolve to, driven from the top bar avatar
+(`src/shared/shell/UserMenu.tsx`). The active id is process-wide, needs no
+capability, and is audited. It stands in for sign-in and must go when real
+authentication lands.
+
 **Not yet implemented** — real authentication/session, permission enforcement on
 queries (grants are currently descriptive), invitation delivery. See
 `docs/REQUIREMENTS_CHECKLIST.md`.

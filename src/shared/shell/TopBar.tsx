@@ -6,15 +6,30 @@ import { VIEW_TITLES, viewFromPathname } from '@/shared/config/navigation';
 import { formatDateLong } from '@/shared/lib/dates';
 import { BASE_CURRENCY } from '@/shared/config/app-config';
 import type { IsoDate } from '@/shared/types/common';
+import { GlobalSearch } from './GlobalSearch';
 import { useNavigation } from './NavigationContext';
+import { UserMenu, type SwitchUserAction, type UserMenuPersona } from './UserMenu';
 
 export interface TopBarProps {
   readonly asOfDate: IsoDate;
   readonly unreadNotifications: number;
   readonly currentUserInitials: string;
+  readonly currentUserName: string;
+  /** The bare role name for the account menu chip, e.g. "Portfolio owner". */
+  readonly currentUserRoleLabel: string;
+  readonly personas: readonly UserMenuPersona[];
+  readonly switchUserAction: SwitchUserAction;
 }
 
-export function TopBar({ asOfDate, unreadNotifications, currentUserInitials }: TopBarProps) {
+export function TopBar({
+  asOfDate,
+  unreadNotifications,
+  currentUserInitials,
+  currentUserName,
+  currentUserRoleLabel,
+  personas,
+  switchUserAction,
+}: TopBarProps) {
   const pathname = usePathname();
   const { isDrawerOpen, toggleDrawer } = useNavigation();
   const title = VIEW_TITLES[viewFromPathname(pathname)];
@@ -42,21 +57,20 @@ export function TopBar({ asOfDate, unreadNotifications, currentUserInitials }: T
         As of <b>{formatDateLong(asOfDate)}</b> · {BASE_CURRENCY}
       </div>
 
-      <label className="search">
-        <Icon name="i-search" />
-        <input placeholder="Search properties, tenants, documents…" aria-label="Search" />
-      </label>
+      <GlobalSearch />
 
       <button className="icon-btn" aria-label={`Notifications, ${unreadNotifications} unread`} type="button">
         <Icon name="i-bell" />
         {unreadNotifications > 0 ? <span className="dot" /> : null}
       </button>
 
-      <button className="icon-btn hide-m" aria-label="Account" type="button">
-        <div className="avatar" style={{ width: 28, height: 28, fontSize: 11 }}>
-          {currentUserInitials}
-        </div>
-      </button>
+      <UserMenu
+        currentUserName={currentUserName}
+        currentUserRoleLabel={currentUserRoleLabel}
+        currentUserInitials={currentUserInitials}
+        personas={personas}
+        switchUserAction={switchUserAction}
+      />
     </header>
   );
 }

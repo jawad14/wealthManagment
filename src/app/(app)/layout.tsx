@@ -8,6 +8,15 @@ import { sharedBillsService } from '@/modules/shared-bills/service';
 import { initialsOf } from '@/shared/components/Avatar';
 import { ROLE_LABELS } from '@/modules/access/model';
 import { dashboardService } from '@/modules/dashboard/service';
+import { switchUserAction } from '@/modules/access/actions';
+import type { AccessRole } from '@/modules/access/model';
+
+/** Roles offered as test personas in the top bar, with what each may see (NFR-01). */
+const PERSONA_NOTES: Partial<Record<AccessRole, string>> = {
+  'portfolio-owner': 'Full access',
+  'operations-delegate': 'Assigned properties only · no net worth',
+  'accountant-readonly': 'Approved records · net worth denied',
+};
 
 /**
  * Chrome for every application screen.
@@ -32,6 +41,21 @@ export default function AppLayout({ children }: { readonly children: ReactNode }
       currentUserName={currentUser.name}
       currentUserRole={`${ROLE_LABELS[currentUser.role]} · MFA ${currentUser.mfa === 'on' ? 'on' : 'not required'}`}
       currentUserInitials={initialsOf(currentUser.name)}
+      currentUserRoleLabel={ROLE_LABELS[currentUser.role]}
+      personas={accessService.listUsers().flatMap((user) => {
+        const note = PERSONA_NOTES[user.role];
+        if (!note) return [];
+        return [
+          {
+            userId: user.id,
+            name: user.name,
+            roleLabel: ROLE_LABELS[user.role],
+            note,
+            isCurrent: user.id === currentUser.id,
+          },
+        ];
+      })}
+      switchUserAction={switchUserAction}
       unreadNotifications={3}
     >
       {children}

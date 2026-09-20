@@ -17,6 +17,27 @@ const INVITABLE_ROLES: readonly AccessRole[] = [
 ];
 
 /**
+ * Switch the active test persona (NFR-01 testing aid).
+ *
+ * Revalidates the whole layout: the sidebar, badges and every page depend on
+ * who is signed in, so nothing rendered for the previous user may be reused.
+ */
+export async function switchUserAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction(
+    (user: { readonly name: string }) => `Now acting as ${user.name}`,
+    () => {
+      const userId = requireString(form, 'userId', 'User');
+      const user = accessService.switchUser(asId<'User'>(userId));
+      revalidatePath('/', 'layout');
+      return user;
+    },
+  );
+}
+
+/**
  * Invite someone (NFR-01).
  *
  * Grants are scoped from the outset — an invitation without a scope would grant

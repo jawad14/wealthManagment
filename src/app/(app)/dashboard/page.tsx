@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { Banner } from '@/shared/components/Banner';
 import { Card, CardBody, CardHeader } from '@/shared/components/Card';
 import { Grid, Stack } from '@/shared/components/Layout';
+import { renderGuarded } from '@/shared/components/AccessDenied';
 import { resolveAsOfDate } from '@/shared/config/app-config';
+import type { IsoDate } from '@/shared/types/common';
 import { dashboardApi } from '@/modules/dashboard/api';
 import { obligationsService } from '@/modules/obligations/service';
 import { ScopeSwitcher } from '@/modules/dashboard/components/ScopeSwitcher';
@@ -29,7 +31,15 @@ interface PageProps {
 export default async function DashboardPage({ searchParams }: PageProps) {
   const asOf = resolveAsOfDate();
   const { entityId } = await searchParams;
-  const overview = dashboardApi.overview(asOf, typeof entityId === 'string' ? entityId : undefined);
+  const requested = typeof entityId === 'string' ? entityId : undefined;
+
+  // A user without portfolio totals sees an explanation, not a crash (NFR-01).
+  return renderGuarded(() => dashboardView(asOf, requested));
+}
+
+/** Called as a plain function, not rendered, so the guard throws inside `renderGuarded`. */
+function dashboardView(asOf: IsoDate, entityId: string | undefined) {
+  const overview = dashboardApi.overview(asOf, entityId);
   const scope = overview.scope;
 
   return (

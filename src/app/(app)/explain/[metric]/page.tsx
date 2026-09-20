@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { renderGuarded } from '@/shared/components/AccessDenied';
 import { resolveAsOfDate } from '@/shared/config/app-config';
 import { explainService, METRIC_LABELS, type ExplainableMetric } from '@/modules/dashboard/explain';
 import { accessService } from '@/modules/access/service';
@@ -22,7 +23,8 @@ export default async function ExplainPage({ params, searchParams }: PageProps) {
   const typed = metric as ExplainableMetric;
 
   // The drill-down is guarded by the same capability as the screen it came from.
-  accessService.guard(exportsService.capabilityFor(typed));
-
-  return <ExplainScreen explanation={explainService.explain(typed, asOf ?? resolveAsOfDate())} />;
+  return renderGuarded(() => {
+    accessService.guard(exportsService.capabilityFor(typed));
+    return <ExplainScreen explanation={explainService.explain(typed, asOf ?? resolveAsOfDate())} />;
+  });
 }

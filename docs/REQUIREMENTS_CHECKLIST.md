@@ -209,7 +209,7 @@ audit entry and revalidates. `tests/actions.test.ts` covers all of them.
 | **UAT-01** | Joint ownership, corporate trustee, home and two-property secured loan consolidate without duplicate assets/debt | ✅ `tests/uat-01-consolidation.test.ts` (10 tests) |
 | **UAT-02** | Partial/advance/combined payments, refunds and duplicate CSV imports reconcile exactly | ✅ `tests/uat-02-reconciliation.test.ts` (9 tests) |
 | **UAT-03** | Paid or disputed obligations suppress queued messages; retries produce no duplicates | ✅ `tests/uat-03-reminders.test.ts` (10 tests) |
-| **UAT-04** | A delegate cannot retrieve restricted totals through direct URLs, exports, search or document links | ⚠️ `tests/uat-04-permissions.test.ts` (8 tests) — enforced at the module API, so URLs and exports are covered. **Search and document links are not built**, so those paths are untested. |
+| **UAT-04** | A delegate cannot retrieve restricted totals through direct URLs, exports, search or document links | ⚠️ `tests/uat-04-permissions.test.ts` (8 tests) — enforced at the module API, so URLs and exports are covered. **Search** is built and permission-filtered per category and per record scope (`tests/fr-09-search.test.ts`, 5 permission tests). **Document links are not built**, so that path is untested. |
 | **UAT-05** | Dashboard cash flow and net worth match independently calculated fixtures | ✅ `tests/uat-05-dashboard-fixtures.test.ts` (8 tests) |
 | **UAT-06** | Restore the deployment from backup and reconcile record counts and sample balances | ❌ **Not possible** — no persistence or backup exists |
 | **UAT-07** | Stale valuations, missing due dates and unmatched transactions are clearly flagged | ✅ `tests/uat-07-data-quality.test.ts` (10 tests) |

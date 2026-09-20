@@ -28,7 +28,33 @@ export interface AccessRow {
 export const accessService = {
   /** The signed-in user. A session lookup replaces this when authentication lands. */
   getCurrentUser(): User {
-    return accessService.requireUser(CURRENT_USER_ID);
+    return accessService.requireUser(accessRepository.getActiveUserId() ?? CURRENT_USER_ID);
+  },
+
+  /**
+   * Act as another person, so NFR-01 restrictions can be exercised live.
+   *
+   * A testing aid standing in for sign-in: it deliberately requires no
+   * capability, otherwise a tester who switched to a restricted persona could
+   * never switch back. It must not survive the arrival of real authentication.
+   */
+  switchUser(userId: UserId): User {
+    const user = accessRepository.listUsers().find((candidate) => candidate.id === userId);
+    if (!user) throw new NotFoundError('User', userId);
+
+    const previous = accessService.getCurrentUser();
+    accessRepository.setActiveUserId(user.id);
+    accessService.record({
+      actor: previous.name,
+      summary: `Switched user · now acting as ${user.name}`,
+      context: `${ROLE_LABELS[previous.role]} → ${ROLE_LABELS[user.role]} · test persona switch`,
+    });
+    return user;
+  },
+
+  /** The personas the top bar offers, in seeded order. */
+  listUsers(): readonly User[] {
+    return accessRepository.listUsers();
   },
 
   requireUser(id: UserId): User {
@@ -59,7 +85,7 @@ export const accessService = {
   },
 
   currentScope(): AccessScope {
-    return accessService.scopeFor(CURRENT_USER_ID);
+    return accessService.scopeFor(accessService.getCurrentUser().id);
   },
 
   /**
