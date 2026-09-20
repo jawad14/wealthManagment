@@ -3,10 +3,10 @@
  */
 import { randomUUID } from 'node:crypto';
 import { NotFoundError, ValidationError } from '@/shared/lib/errors';
-import { addDays, daysBetween, formatDateShort, isBefore } from '@/shared/lib/dates';
+import { addDays, addMonths, daysBetween, formatDateShort, isBefore } from '@/shared/lib/dates';
 import { UPCOMING_WINDOW_DAYS } from '@/shared/config/app-config';
 import { money, sumMoney, type Money } from '@/shared/lib/money';
-import type { IsoDate, ObligationId, UserId } from '@/shared/types/common';
+import { asId, type IsoDate, type ObligationId, type UserId } from '@/shared/types/common';
 import { accessService } from '@/modules/access/service';
 import { obligationsRepository } from './repository';
 import {
@@ -15,6 +15,7 @@ import {
   type DispatchResult,
   type Obligation,
   type ObligationStatus,
+  type Recurrence,
   type ReminderChannel,
   type ReminderEvent,
   type ReminderIneligibility,
@@ -240,12 +241,56 @@ export const obligationsService = {
     });
     if (!updated) throw new NotFoundError('Obligation', obligation.id);
 
+    const nextDueOn = obligationsService.scheduleNextOccurrence(obligation);
+
     accessService.record({
       actor: accessService.resolveUserName(input.actor) ?? 'system',
       summary: `Payment evidence attached · ${obligation.title}`,
-      context: `${obligation.contextLabel} · marked paid ${input.paidOn}`,
+      context: `${obligation.contextLabel} · marked paid ${input.paidOn}${
+        nextDueOn ? ` · next occurrence scheduled for ${nextDueOn}` : ''
+      }`,
     });
     return updated;
+  },
+
+  /**
+   * Roll a recurring obligation forward once it is paid (FR-03).
+   *
+   * The next due date is stepped from the *due* date, not the paid date, so a
+   * late payment does not drift the schedule. Returns the new due date, or null
+   * when nothing was scheduled — a one-off, or a retry that finds the next
+   * instance already there.
+   */
+  scheduleNextOccurrence(obligation: Obligation): IsoDate | null {
+    if (obligation.recurrence === 'once') return null;
+
+    const nextDueOn = addMonths(obligation.dueOn, RECURRENCE_MONTHS[obligation.recurrence]);
+
+    // Idempotency: paying the same obligation twice must not schedule twice.
+    const exists = obligationsRepository
+      .list()
+      .some(
+        (candidate) =>
+          candidate.title === obligation.title &&
+          candidate.propertyId === obligation.propertyId &&
+          candidate.dueOn === nextDueOn,
+      );
+    if (exists) return null;
+
+    obligationsRepository.insert({
+      id: asId<'Obligation'>(`obl-${randomUUID()}`),
+      title: obligation.title,
+      contextLabel: obligation.contextLabel,
+      ...(obligation.propertyId ? { propertyId: obligation.propertyId } : {}),
+      dueOn: nextDueOn,
+      recurrence: obligation.recurrence,
+      ownerUserId: obligation.ownerUserId,
+      amount: obligation.amount,
+      evidence: { state: 'none', label: '—' },
+      disputed: false,
+      reminderPolicy: obligation.reminderPolicy,
+    });
+    return nextDueOn;
   },
 
   /** Mark an obligation disputed, which pauses reminders without stopping accrual. */
@@ -396,6 +441,13 @@ export const obligationsService = {
         ),
       );
   },
+};
+
+/** How far each recurrence steps the due date forward. */
+const RECURRENCE_MONTHS: Record<Exclude<Recurrence, 'once'>, number> = {
+  monthly: 1,
+  quarterly: 3,
+  yearly: 12,
 };
 
 function skip(obligationId: ObligationId, dispatchKey: string, reason: SkipReason): DispatchResult {

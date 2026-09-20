@@ -5,7 +5,13 @@
  * expenses and original evidence; a correction records who changed what and when."
  * Plus: "deletion must not erase audit history."
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The action calls revalidatePath, which needs a request scope a unit test lacks.
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+
+import { correctExpenseAction } from '@/modules/expenses/actions';
+import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
 import { expensesService } from '@/modules/expenses/service';
 import { currentRevision } from '@/modules/expenses/model';
 import { USER_IDS } from '@/modules/access/data/seed';
@@ -73,6 +79,52 @@ describe('FR-04 · expense records', () => {
         actor: USER_IDS.jawad,
       }),
     ).toThrow(ValidationError);
+  });
+
+  it('appends v2 when a correction is submitted from the form, leaving v1 intact', async () => {
+    const before = expensesService.require('exp-insurance-benton');
+    expect(before.revisions).toHaveLength(1);
+    const original = before.revisions[0];
+
+    // Field values exactly as the "Correct expense" form submits them.
+    const form = new FormData();
+    form.append('expenseId', 'exp-insurance-benton');
+    form.append('reason', 'Invoice amount updated after credit');
+    form.append('amount', '$1,650.50');
+    form.append('category', 'insurance');
+    form.append('description', 'Landlord insurance renewal · credit applied');
+    form.append('effectiveOn', '2026-08-01');
+
+    const result = await correctExpenseAction(IDLE_RESULT as ActionResult<unknown>, form);
+    expect(result.ok).toBe(true);
+
+    const view = expensesService.view(expensesService.require('exp-insurance-benton'));
+    expect(view.versionCount).toBe(2);
+    expect(view.isCorrected).toBe(true);
+    expect(view.current.version).toBe(2);
+    expect(view.current.amount.cents).toBe(fromMajorUnits(1_650.5).cents);
+    expect(view.current.description).toBe('Landlord insurance renewal · credit applied');
+    expect(view.current.correctionReason).toBe('Invoice amount updated after credit');
+    // The allocation was not on the form, so it carries over unchanged.
+    expect(view.current.allocation).toEqual(original?.allocation);
+
+    // v1 is still in the timeline exactly as it was entered.
+    expect(view.expense.revisions[0]).toEqual(original);
+    expect(view.expense.revisions[0]?.amount.cents).toBe(fromMajorUnits(1_710).cents);
+    expect(view.expense.revisions[0]?.recordedBy).toBe(USER_IDS.jawad);
+  });
+
+  it('rejects a form correction with no reason and adds no version', async () => {
+    const versions = expensesService.require('exp-management-benton').revisions.length;
+
+    const form = new FormData();
+    form.append('expenseId', 'exp-management-benton');
+    form.append('reason', '');
+    form.append('amount', '10.00');
+
+    const result = await correctExpenseAction(IDLE_RESULT as ActionResult<unknown>, form);
+    expect(result.ok).toBe(false);
+    expect(expensesService.require('exp-management-benton').revisions).toHaveLength(versions);
   });
 
   it('lets a reviewer drill from a total to its allocated expenses', () => {

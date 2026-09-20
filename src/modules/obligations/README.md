@@ -14,6 +14,10 @@ and reminder schedules. Covers FR-03 and FR-08.
   date passes or evidence is attached.
 - Reminders re-check paid/disputed status immediately before sending, and respect
   quiet hours.
+- **Paying a recurring obligation schedules the next one.** The next due date
+  steps from the *due* date (not the paid date) by 1, 3 or 12 months, and the new
+  instance starts open with no evidence. A matching title + property + due date
+  means it already exists, so recording the payment twice schedules once.
 
 **Owns** — `Obligation`, `ReminderPolicy`, `ReminderEvent`, `Evidence`.
 
@@ -24,4 +28,5 @@ labels, via the page).
 badge).
 
 **Not yet implemented** — the scheduler that actually sends reminders, recurrence
-expansion into future instances, escalation-to-task creation, obligation CRUD.
+expansion beyond the single next instance created on payment, escalation-to-task
+creation, obligation CRUD.

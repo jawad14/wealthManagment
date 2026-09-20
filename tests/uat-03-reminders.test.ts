@@ -24,6 +24,61 @@ const sentCount = (obligationId: string): number =>
     .listReminders(obligationId as never)
     .filter((event) => event.outcome === 'sent').length;
 
+describe('FR-03 · recurring obligations roll over when paid', () => {
+  const pay = (obligationId: (typeof OBLIGATION_IDS)[keyof typeof OBLIGATION_IDS]) =>
+    obligationsService.recordPayment({
+      obligationId,
+      paidOn: AS_OF,
+      documentId: 'doc-receipt',
+      actor: USER_IDS.jawad,
+    });
+
+  it('closes a one-off obligation without scheduling another', () => {
+    const before = obligationsRepository.list().length;
+
+    const paid = pay(OBLIGATION_IDS.loanRateReview); // seeded as recurrence 'once'
+
+    expect(paid.paidOn).toBe(AS_OF);
+    expect(paid.evidence.state).toBe('attached');
+    expect(obligationsRepository.list().length).toBe(before);
+  });
+
+  it('schedules the next yearly occurrence 12 months on, carrying the details over', () => {
+    const original = obligationsService.require(OBLIGATION_IDS.insuranceCompton); // yearly, due 14 Sep 2026
+    const before = obligationsRepository.list().length;
+
+    const paid = pay(OBLIGATION_IDS.insuranceCompton);
+
+    expect(paid.paidOn).toBe(AS_OF);
+    expect(obligationsRepository.list().length).toBe(before + 1);
+
+    const next = obligationsRepository
+      .list()
+      .find((obligation) => obligation.title === original.title && obligation.dueOn === '2027-09-14');
+    expect(next).toBeDefined();
+    expect(next?.id).not.toBe(original.id);
+    expect(next?.propertyId).toBe(original.propertyId);
+    expect(next?.contextLabel).toBe(original.contextLabel);
+    expect(next?.recurrence).toBe('yearly');
+    expect(next?.ownerUserId).toBe(original.ownerUserId);
+    expect(next?.amount).toEqual(original.amount);
+    expect(next?.reminderPolicy).toEqual(original.reminderPolicy);
+    // The new instance starts open: unpaid, undisputed, no evidence yet.
+    expect(next?.paidOn).toBeUndefined();
+    expect(next?.disputed).toBe(false);
+    expect(next?.evidence).toEqual({ state: 'none', label: '—' });
+  });
+
+  it('does not schedule a duplicate when the same payment is recorded twice', () => {
+    pay(OBLIGATION_IDS.insuranceCompton);
+    const afterFirst = obligationsRepository.list().length;
+
+    pay(OBLIGATION_IDS.insuranceCompton);
+
+    expect(obligationsRepository.list().length).toBe(afterFirst);
+  });
+});
+
 describe('FR-08 / UAT-03 · reminder dispatch', () => {
   it('sends once for an eligible obligation', () => {
     const result = obligationsService.dispatch({

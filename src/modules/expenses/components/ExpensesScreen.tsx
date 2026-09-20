@@ -10,7 +10,7 @@ import { Grid, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
 import { Timeline, type TimelineEntry } from '@/shared/components/Timeline';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
-import { createExpenseAction, voidExpenseAction } from '../actions';
+import { correctExpenseAction, createExpenseAction, voidExpenseAction } from '../actions';
 import { formatMoney, type Money } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import { AMOUNT_BASIS_LABELS } from '@/shared/types/amounts';
@@ -23,6 +23,19 @@ const FILTER_OPTIONS: readonly { value: ExpenseFilter; label: string }[] = [
   { value: 'no-evidence', label: 'No evidence' },
   { value: 'estimated', label: 'Not actual' },
   { value: 'voided', label: 'Voided' },
+];
+
+const CATEGORY_OPTIONS: readonly { value: string; label: string }[] = [
+  { value: 'insurance', label: 'Insurance' },
+  { value: 'rates', label: 'Council rates' },
+  { value: 'utilities', label: 'Utilities' },
+  { value: 'repairs', label: 'Repairs & maintenance' },
+  { value: 'management', label: 'Management fees' },
+  { value: 'body-corporate', label: 'Body corporate' },
+  { value: 'compliance', label: 'Compliance' },
+  { value: 'loan-interest', label: 'Loan interest' },
+  { value: 'professional', label: 'Professional fees' },
+  { value: 'other', label: 'Other' },
 ];
 
 export interface ExpensesScreenProps {
@@ -205,18 +218,7 @@ export function ExpensesScreen({
                     />
                     <SelectField
                       id="exp-category" name="category" label="Category" defaultValue="repairs"
-                      options={[
-                        { value: 'insurance', label: 'Insurance' },
-                        { value: 'rates', label: 'Council rates' },
-                        { value: 'utilities', label: 'Utilities' },
-                        { value: 'repairs', label: 'Repairs & maintenance' },
-                        { value: 'management', label: 'Management fees' },
-                        { value: 'body-corporate', label: 'Body corporate' },
-                        { value: 'compliance', label: 'Compliance' },
-                        { value: 'loan-interest', label: 'Loan interest' },
-                        { value: 'professional', label: 'Professional fees' },
-                        { value: 'other', label: 'Other' },
-                      ]}
+                      options={CATEGORY_OPTIONS}
                     />
                     <TextField id="exp-effective" name="effectiveOn" label="Effective date" type="date" defaultValue={today} required />
                     <SelectField
@@ -249,7 +251,7 @@ export function ExpensesScreen({
             </CardBody>
           </Card>
         ) : selected ? (
-          <ExpenseDetail view={selected} userNames={userNames} propertyNames={propertyNames} entityNames={entityNames} />
+          <ExpenseDetail key={selected.expense.id} view={selected} userNames={userNames} propertyNames={propertyNames} entityNames={entityNames} />
         ) : null}
       </Grid>
 
@@ -301,6 +303,7 @@ function ExpenseDetail({
   readonly entityNames: Record<string, string>;
 }) {
   const { expense, current } = view;
+  const [isCorrecting, setCorrecting] = useState(false);
 
   const entries: readonly TimelineEntry[] = [
     ...expense.revisions.map<TimelineEntry>((revision) => ({
@@ -329,7 +332,15 @@ function ExpenseDetail({
     <Card>
       <CardHeader
         title={current.description}
-        aside={view.isVoided ? <Chip tone="neutral" icon="i-x">Voided</Chip> : <Chip tone="gold">Selected</Chip>}
+        aside={
+          view.isVoided ? (
+            <Chip tone="neutral" icon="i-x">Voided</Chip>
+          ) : (
+            <Button small onClick={() => setCorrecting((open) => !open)}>
+              {isCorrecting ? 'Cancel correction' : 'Correct expense'}
+            </Button>
+          )
+        }
       />
       <CardBody className="stack">
         <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -354,7 +365,51 @@ function ExpenseDetail({
           <Timeline entries={entries} />
         </div>
 
-        {!view.isVoided ? (
+        {!view.isVoided && isCorrecting ? (
+          <ActionForm
+            action={correctExpenseAction}
+            submitLabel="Save correction"
+            hiddenFields={{ expenseId: expense.id }}
+            onSuccess={() => setCorrecting(false)}
+            footnote={
+              <Sub style={{ fontSize: 12 }}>
+                Corrections are appended as a new version with your reason. Prior versions and who entered them are
+                never overwritten.
+              </Sub>
+            }
+          >
+            {({ fieldErrors }) => (
+              <FieldGrid>
+                <TextField
+                  id="correct-reason" name="reason" label="Reason for correction" required
+                  placeholder="e.g. Invoice amount updated after credit"
+                  invalid={Boolean(firstError(fieldErrors, 'reason'))}
+                  hint={firstError(fieldErrors, 'reason')}
+                />
+                <TextField
+                  id="correct-amount" name="amount" label="New amount"
+                  defaultValue={formatMoney(current.amount, { showCents: true })}
+                  invalid={Boolean(firstError(fieldErrors, 'amount'))}
+                  hint={firstError(fieldErrors, 'amount')}
+                />
+                <SelectField
+                  id="correct-category" name="category" label="Category" defaultValue={current.category}
+                  options={CATEGORY_OPTIONS}
+                />
+                <TextField
+                  id="correct-description" name="description" label="New description"
+                  defaultValue={current.description}
+                />
+                <TextField
+                  id="correct-effective" name="effectiveOn" label="Effective date" type="date"
+                  defaultValue={current.effectiveOn}
+                />
+              </FieldGrid>
+            )}
+          </ActionForm>
+        ) : null}
+
+        {!view.isVoided && !isCorrecting ? (
           <ActionForm
             action={voidExpenseAction}
             submitLabel="Void expense"
