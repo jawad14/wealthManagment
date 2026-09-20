@@ -15,6 +15,17 @@ supplies the BR-03 cash-basis figures.
 - Internal transfers and loan drawdowns are excluded from cash flow (BR-03).
 - **Staged rows and posted history are separate collections.** An import in
   progress can therefore never move a historical figure.
+- **Posting is the only bridge between them** (`postToLedger`). It is refused
+  while any row is `auto-matched` or `needs-review`. Unmatched rows neither block
+  nor post. Confirmed rows are rolled into the `PostedCashFlowMonth` they fall in
+  (transfers excluded, BR-03) and stamped `postedAt`; a stamped row is never
+  rolled up again and can no longer be changed. Allocating a leftover unmatched
+  row later makes the import postable again for just that row.
+- `stage: 'posted'` is terminal and is not a stepper step — it means step 5 is
+  done. `loanPrincipalComponent` is not updated by posting: a bank line does not
+  say how much of a repayment was principal.
+- A human allocation of `INTERNAL_TRANSFER_ALLOCATION` outranks the matcher's
+  suggestion when deciding what is excluded from cash flow.
 
 **Owns** — `BankImport`, `StagedTransaction`, `MatchSuggestion`,
 `PostedCashFlowMonth`.
@@ -25,4 +36,6 @@ supplies the BR-03 cash-basis figures.
 attention item, sidebar badge).
 
 **Not yet implemented** — actual CSV/OFX parsing and upload, the matching engine
-itself (suggestions are seeded), posting to a ledger, re-allocation UI.
+itself (suggestions are seeded), a transaction-level ledger (posting rolls into
+monthly cash flow only; it does not create rent allocations or expenses),
+re-allocation UI.

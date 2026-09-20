@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { asId } from '@/shared/types/common';
 import { runAction, type ActionResult } from '@/shared/lib/action-result';
 import { readString, requireString } from '@/shared/lib/form-data';
-import { NotFoundError, ValidationError } from '@/shared/lib/errors';
+import { ConflictError, NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { accessService } from '@/modules/access/service';
 import { reconciliationService } from './service';
 import { reconciliationRepository } from './repository';
@@ -95,6 +95,9 @@ export async function leaveUnmatchedAction(
     const transactionId = asId<'BankTransaction'>(requireString(form, 'transactionId', 'Transaction'));
     const txn = reconciliationRepository.findTransaction(transactionId);
     if (!txn) throw new NotFoundError('Staged transaction', transactionId);
+    if (txn.postedAt) {
+      throw new ConflictError('This transaction has already been posted to the ledger and can no longer be changed.');
+    }
 
     const updated = reconciliationRepository.updateTransaction(transactionId, { state: 'unmatched' });
     accessService.record({
@@ -104,6 +107,26 @@ export async function leaveUnmatchedAction(
     });
     revalidate();
     return updated;
+  });
+}
+
+/**
+ * Post the import's confirmed rows to the ledger — the wizard's final step.
+ *
+ * Refused while any row still carries an unreviewed suggestion; the service
+ * owns that rule, so the button being visible is never what permits a posting.
+ */
+export async function postImportToLedgerAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction('Import posted to ledger', () => {
+    const result = reconciliationService.postToLedger(
+      asId<'BankImport'>(requireString(form, 'importId', 'Bank import')),
+      accessService.getCurrentUser().id,
+    );
+    revalidate();
+    return result;
   });
 }
 

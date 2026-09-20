@@ -20,6 +20,8 @@ export interface ImportScreenProps {
   readonly summary: ImportSummary;
   readonly transactions: readonly StagedTransaction[];
   readonly highConfidenceCount: number;
+  /** Confirmed rows not yet posted to the ledger. */
+  readonly readyToPostCount: number;
   /** Formatted period label, e.g. "1–31 Aug 2026 · CSV". */
   readonly periodLabel: string;
   /** Allocation targets, resolved on the server. */
@@ -33,10 +35,17 @@ export function ImportScreen({
   summary,
   transactions,
   highConfidenceCount,
+  readyToPostCount,
   periodLabel,
   allocationOptions,
 }: ImportScreenProps) {
   const [allocating, setAllocating] = useState<StagedTransaction | null>(null);
+  const awaitingReviewCount = summary.autoMatched + summary.needsReview;
+  const posted = bankImport.stage === 'posted';
+  const unmatchedNote =
+    summary.unmatched > 0
+      ? ` ${summary.unmatched} unmatched row${summary.unmatched === 1 ? ' stays' : 's stay'} unposted until allocated.`
+      : '';
 
   return (
     <Stack>
@@ -45,6 +54,22 @@ export function ImportScreen({
           <Stepper steps={steps} label="Import progress" />
         </CardBody>
       </Card>
+
+      {posted && readyToPostCount === 0 ? (
+        <Banner tone="info" icon="i-check" title="Import posted to ledger">
+          Confirmed rows are now part of posted cash flow and can no longer be changed.{unmatchedNote}
+        </Banner>
+      ) : null}
+
+      {awaitingReviewCount === 0 && readyToPostCount > 0 ? (
+        <Banner
+          tone="info"
+          icon="i-check"
+          title={`Every row is reviewed · ${readyToPostCount} confirmed row${readyToPostCount === 1 ? '' : 's'} ready to post`}
+        >
+          Use “Post to ledger” above the table to finish this import.{unmatchedNote}
+        </Banner>
+      ) : null}
 
       {bankImport.duplicatesSkipped > 0 ? (
         <Banner
@@ -128,6 +153,9 @@ export function ImportScreen({
       <StagedTransactionsTable
         rows={transactions}
         highConfidenceCount={highConfidenceCount}
+        importId={bankImport.id}
+        awaitingReviewCount={awaitingReviewCount}
+        readyToPostCount={readyToPostCount}
         onAllocate={setAllocating}
       />
 

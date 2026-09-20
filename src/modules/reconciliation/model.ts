@@ -10,8 +10,11 @@
 import type { BankImportId, BankTransactionId, IsoDate, IsoDateTime, PropertyId, UserId } from '@/shared/types/common';
 import type { Money } from '@/shared/lib/money';
 
-/** Wizard stages, in order. */
-export type ImportStage = 'upload' | 'validate' | 'duplicates' | 'match' | 'post';
+/**
+ * Wizard stages, in order. `posted` is terminal: it is not a step of its own but
+ * the state of an import whose fifth step ("Post to ledger") is complete.
+ */
+export type ImportStage = 'upload' | 'validate' | 'duplicates' | 'match' | 'post' | 'posted';
 
 export const IMPORT_STAGE_LABELS: Record<ImportStage, string> = {
   upload: 'Upload',
@@ -19,8 +22,10 @@ export const IMPORT_STAGE_LABELS: Record<ImportStage, string> = {
   duplicates: 'Duplicates',
   match: 'Match & confirm',
   post: 'Post to ledger',
+  posted: 'Posted to ledger',
 };
 
+/** The five steps the stepper shows. `posted` is deliberately absent — see `ImportStage`. */
 export const IMPORT_STAGE_ORDER: readonly ImportStage[] = ['upload', 'validate', 'duplicates', 'match', 'post'];
 
 export interface BankImport {
@@ -38,6 +43,9 @@ export interface BankImport {
    */
   readonly duplicatesSkipped: number;
   readonly duplicatesSkippedFromDate?: IsoDate;
+  /** Set when the import was last posted to the ledger. */
+  readonly postedBy?: UserId;
+  readonly postedAt?: IsoDateTime;
 }
 
 /** What the matcher thinks a row is. */
@@ -86,6 +94,27 @@ export interface StagedTransaction {
   readonly confirmedAt?: IsoDateTime;
   /** A human correction, kept alongside the original suggestion rather than replacing it. */
   readonly correctionNote?: string;
+  /**
+   * Set when the row was rolled into posted cash flow. A posted row is never
+   * rolled up again, so posting the same import twice cannot double-count it.
+   */
+  readonly postedAt?: IsoDateTime;
+}
+
+/**
+ * The allocation a person picks to say "this is money moving between our own
+ * accounts". It is stored as the row's correction note, so posting recognises it
+ * by this text and keeps the row out of cash flow (BR-03).
+ */
+export const INTERNAL_TRANSFER_ALLOCATION = 'Internal transfer · excluded from cash flow';
+
+/**
+ * Whether a row stays out of income and expenses (BR-03). A human correction
+ * outranks the matcher's suggestion in both directions.
+ */
+export function isExcludedFromCashFlow(txn: StagedTransaction): boolean {
+  if (txn.correctionNote) return txn.correctionNote.startsWith(INTERNAL_TRANSFER_ALLOCATION);
+  return txn.suggestion?.kind === 'transfer' || txn.suggestion?.excludedFromCashFlow === true;
 }
 
 /** Confidence at or above this is treated as auto-matched. */

@@ -13,12 +13,19 @@ import {
   confirmAllHighConfidenceAction,
   confirmTransactionAction,
   leaveUnmatchedAction,
+  postImportToLedgerAction,
 } from '../actions';
+import type { BankImportId } from '@/shared/types/common';
 import type { StagedTransaction } from '../model';
 
 export interface StagedTransactionsTableProps {
   readonly rows: readonly StagedTransaction[];
   readonly highConfidenceCount: number;
+  readonly importId: BankImportId;
+  /** Rows still carrying an unreviewed suggestion. Posting is offered only at zero. */
+  readonly awaitingReviewCount: number;
+  /** Confirmed rows not yet posted. */
+  readonly readyToPostCount: number;
   /** Opens the allocation panel for a row the matcher could not place. */
   readonly onAllocate: (transaction: StagedTransaction) => void;
 }
@@ -33,6 +40,9 @@ export interface StagedTransactionsTableProps {
 export function StagedTransactionsTable({
   rows,
   highConfidenceCount,
+  importId,
+  awaitingReviewCount,
+  readyToPostCount,
   onAllocate,
 }: StagedTransactionsTableProps) {
   const columns: readonly DataTableColumn<StagedTransaction>[] = [
@@ -77,7 +87,7 @@ export function StagedTransactionsTable({
       render: (row) =>
         row.state === 'confirmed' ? (
           <Chip tone="good" icon="i-check">
-            Confirmed
+            {row.postedAt ? 'Posted' : 'Confirmed'}
           </Chip>
         ) : (
           <Confidence score={row.suggestion?.confidence ?? null} />
@@ -86,7 +96,9 @@ export function StagedTransactionsTable({
     {
       header: 'Action',
       render: (row) => {
-        if (row.state === 'confirmed') return <span className="sub">Ready to post</span>;
+        if (row.state === 'confirmed') {
+          return <span className="sub">{row.postedAt ? 'In the ledger' : 'Ready to post'}</span>;
+        }
 
         if (row.state === 'unmatched' || row.state === 'needs-review') {
           return (
@@ -128,12 +140,23 @@ export function StagedTransactionsTable({
         title="Staged transactions"
         aside={
           <Row>
-            <ActionForm
-              action={confirmAllHighConfidenceAction}
-              submitLabel={`Confirm all high-confidence (${highConfidenceCount})`}
-              render="inline"
-              submitVariant="default"
-            />
+            {awaitingReviewCount > 0 ? (
+              <ActionForm
+                action={confirmAllHighConfidenceAction}
+                submitLabel={`Confirm all high-confidence (${highConfidenceCount})`}
+                render="inline"
+                submitVariant="default"
+              />
+            ) : null}
+            {awaitingReviewCount === 0 && readyToPostCount > 0 ? (
+              <ActionForm
+                action={postImportToLedgerAction}
+                submitLabel={`Post to ledger (${readyToPostCount})`}
+                render="inline"
+                submitVariant="gold"
+                hiddenFields={{ importId }}
+              />
+            ) : null}
           </Row>
         }
       />

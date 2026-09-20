@@ -17,6 +17,8 @@ export const reconciliationRepository = {
   /** The import currently being worked on — the most recent one. */
   latestImport: (): BankImport | undefined =>
     [...imports.list()].sort((a, b) => b.importedOn.localeCompare(a.importedOn))[0],
+  updateImport: (id: BankImportId, changes: Partial<Omit<BankImport, 'id'>>): BankImport | undefined =>
+    imports.update(id, changes),
 
   listTransactions: (importId: BankImportId): readonly StagedTransaction[] =>
     [...transactions.where((txn) => txn.importId === importId)].sort((a, b) => b.date.localeCompare(a.date)),
@@ -31,4 +33,16 @@ export const reconciliationRepository = {
     [...cashFlow.list()].sort((a, b) => a.month.localeCompare(b.month)),
   findPostedCashFlow: (month: string): PostedCashFlowMonth | undefined =>
     cashFlow.findBy((entry) => entry.month === month),
+  insertPostedCashFlow: (entry: PostedCashFlowMonth): PostedCashFlowMonth => cashFlow.insert(entry),
+  updatePostedCashFlow: (
+    id: string,
+    changes: Partial<Omit<PostedCashFlowMonth, 'id'>>,
+  ): PostedCashFlowMonth | undefined => cashFlow.update(id, changes),
+
+  /** Restore the seeded fixture — used by tests. */
+  reset: (): void => {
+    imports.reset();
+    transactions.reset();
+    cashFlow.reset();
+  },
 };

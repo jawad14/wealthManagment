@@ -79,7 +79,8 @@ figure explainable from its inputs, which FR-09 requires.
 
 ### 3.8 Staged transactions and posted cash flow are separate collections
 *Why:* an import in progress must never move a historical figure. Also lets the
-chart and month KPIs match the design exactly.
+chart and month KPIs match the design exactly. `postToLedger` is the only bridge
+between the two, and it stamps each row `postedAt` so no row crosses twice.
 
 ### 3.9 Computed figures over prototype placeholders
 Where the prototype's numbers do not reconcile with the records on the same
@@ -199,6 +200,7 @@ editing an entity after creation.
 
 | Date | Change |
 | --- | --- |
+| 2026-09-20 | FR-06 "Post to ledger": `reconciliationService.postToLedger`, `postImportToLedgerAction`, `updateImport`/posted-cash-flow writes/`reset` on the repository, button + banners on `/bank-import`, `tests/fr-06-post-to-ledger.test.ts`. New terminal `ImportStage` `'posted'` (not a stepper step; step 5 shows done). Rows are stamped `postedAt`, so re-posting cannot double-count and a late allocation can be posted on its own. **Assumptions:** (a) any `unmatched` row counts as reviewed — there is no separate "reviewed" flag, so a never-opened unmatched row does not block posting, it just stays unposted; (b) posting adds to the seeded month on top of its existing figures, treating the seed as other accounts' history — after posting, August reads $35,250 in / $34,200.13 out; (c) `loanPrincipalComponent` is not updated. (a) and (b) were confirmed by the owner on 2026-09-20. **Open:** posting rolls into monthly cash flow only — it does not create rent allocations or expense records. 171 tests. |
 | 2026-09-20 | Added "+ Add facility" on `/loans`: `loans/actions.ts` (`createLoanAction`), `loansRepository.insert`/`reset`, form in `LoansScreen` (now a client component), `tests/fr-03-loans.test.ts`. A new facility is `single`-secured or unsecured — pools cannot be created from the form. **Assumption:** with no statement yet, the principal/interest split is one month's simple interest on the opening balance, capped at the repayment (IO = all interest); it is a working figure, not the lender's. 162 tests. |
 | 2026-09-07 | Session 1: built from the design alone. 9 modules, 10 screens, 16 API routes, full documentation. Design verified byte-identical. |
 | 2026-09-08 | Session 4: wired every action button to a Server Action (17 stubs → 0). Implemented the two failing FR-05 criteria — charge generation on lease creation, early termination removing only *unearned* charges, and effective rent changes that never restate paid history. Added `ActionForm`, `ActionResult` and `FormData` parsing helpers. 137 tests. |

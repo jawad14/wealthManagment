@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { reconciliationService } from '@/modules/reconciliation/service';
+import { INTERNAL_TRANSFER_ALLOCATION } from '@/modules/reconciliation/model';
 import { propertiesService } from '@/modules/properties/service';
 import { obligationsService } from '@/modules/obligations/service';
 import { resolveAsOfDate } from '@/shared/config/app-config';
@@ -36,6 +37,7 @@ export default function BankImportPage() {
       summary={reconciliationService.summarise(bankImport.id)}
       transactions={reconciliationService.listTransactions(bankImport.id)}
       highConfidenceCount={reconciliationService.highConfidenceCount(bankImport.id)}
+      readyToPostCount={reconciliationService.readyToPostCount(bankImport.id)}
       periodLabel={periodLabel}
       allocationOptions={[
         ...propertiesService.list().map((property) => ({
@@ -50,7 +52,7 @@ export default function BankImportPage() {
           const text = `Obligation · ${title} · ${contextLabel} · due ${formatDateLong(dueOn)}`;
           return { value: text, label: text };
         }),
-        { value: 'Internal transfer · excluded from cash flow', label: 'Internal transfer · excluded from cash flow' },
+        { value: INTERNAL_TRANSFER_ALLOCATION, label: INTERNAL_TRANSFER_ALLOCATION },
       ]}
     />
   );
