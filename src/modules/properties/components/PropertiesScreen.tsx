@@ -102,6 +102,16 @@ export function PropertiesScreen({ cardsByFilter, counts, entities, today }: Pro
                     ]}
                   />
                   <TextField id="prop-settled" name="settledOn" label="Settled on" type="date" defaultValue={today} />
+                  <TextField
+                    id="prop-purchase-price" name="purchasePrice" label="Purchase price" placeholder="760,000"
+                    invalid={Boolean(firstError(fieldErrors, 'purchasePrice'))}
+                    hint={firstError(fieldErrors, 'purchasePrice')}
+                  />
+                  <TextField
+                    id="prop-settlement-costs" name="settlementCosts" label="Settlement costs" placeholder="28,000"
+                    invalid={Boolean(firstError(fieldErrors, 'settlementCosts'))}
+                    hint={firstError(fieldErrors, 'settlementCosts') ?? 'Stamp duty, legal fees'}
+                  />
                 </FieldGrid>
               )}
             </ActionForm>

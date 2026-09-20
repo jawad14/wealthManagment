@@ -26,6 +26,10 @@ export interface Property {
   /** Long-form holding note including any corporate trustee. */
   readonly holdingNote: string;
   readonly settledOn?: IsoDate;
+  /** Contract price paid at settlement, before any costs of acquiring it. */
+  readonly purchasePrice?: Money;
+  /** Costs of acquiring the property — stamp duty, legal fees — which form part of its cost basis. */
+  readonly settlementCosts?: Money;
   /** Set when the property is a development rather than an income asset. */
   readonly constructionCostToDate?: Money;
   /**
@@ -110,6 +114,25 @@ export interface ValuationStatus {
   readonly eligibleForRatios: boolean;
   /** Presentation string, e.g. "Bank val · Aug 2026" or "Purchase price · 2023 · stale". */
   readonly label: string;
+}
+
+/**
+ * What the property cost against what it is worth now (FR-02).
+ *
+ * Derived on read, never stored. Every figure that depends on a missing input
+ * is null rather than zero, so the screen shows "—" instead of a false result.
+ */
+export interface CapitalGrowth {
+  readonly purchasePrice: Money | null;
+  readonly settlementCosts: Money | null;
+  readonly settledOn: IsoDate | null;
+  /** Purchase price plus settlement costs. */
+  readonly totalCostBasis: Money | null;
+  readonly currentValuation: Money | null;
+  /** Current valuation less total cost basis. */
+  readonly growthAmount: Money | null;
+  /** Growth as a fraction of the total cost basis, e.g. 0.25 for 25%. */
+  readonly growthPercent: number | null;
 }
 
 /** Occupancy roll-up for a property's components. */

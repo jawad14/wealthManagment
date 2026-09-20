@@ -12,7 +12,8 @@ import { Tabs } from '@/shared/components/Tabs';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { addComponentAction, addValuationAction } from '../actions';
-import { formatMoney, type Money } from '@/shared/lib/money';
+import { formatMoney, formatPercent, type Money } from '@/shared/lib/money';
+import type { CapitalGrowth } from '../model';
 import type { Tone } from '@/shared/types/common';
 import type { IconName } from '@/shared/components/IconSprite';
 import type { ArrearsState } from '@/modules/leases/model';
@@ -156,6 +157,9 @@ export interface PropertyDetailProps {
   readonly componentNoun: string;
   readonly valuationDetail: string | null;
   readonly valuationAmount: Money | null;
+  readonly capitalGrowth: CapitalGrowth;
+  /** Settlement date already formatted for display, or null when not recorded. */
+  readonly settledOnLabel: string | null;
   readonly propertyId: string;
   readonly today: string;
 }
@@ -180,6 +184,8 @@ export function PropertyDetail({
   componentNoun,
   valuationDetail,
   valuationAmount,
+  capitalGrowth,
+  settledOnLabel,
   propertyId,
   today,
 }: PropertyDetailProps) {
@@ -188,6 +194,19 @@ export function PropertyDetail({
   const [isAddingComponent, setAddingComponent] = useState(false);
   const noun = componentNoun.toLowerCase();
   const activeLeases = rooms.filter((room) => room.state !== null).length;
+
+  // The direction is spelled out in words as well as colour.
+  const growthCents = capitalGrowth.growthAmount?.cents ?? null;
+  const growthStyle =
+    growthCents === null || growthCents === 0
+      ? undefined
+      : { color: growthCents > 0 ? 'var(--good)' : 'var(--bad)' };
+  const growthMeta =
+    growthCents === null
+      ? 'Needs a purchase price and a valuation'
+      : growthCents === 0
+        ? 'No change on cost basis'
+        : `${growthCents > 0 ? 'Up' : 'Down'} ${formatPercent(Math.abs(capitalGrowth.growthPercent ?? 0))} on cost basis`;
 
   const columns: readonly DataTableColumn<RoomRow>[] = [
     { header: componentNoun, lead: true, render: (row) => <CellMain>{row.label}</CellMain> },
@@ -392,6 +411,36 @@ export function PropertyDetail({
               meta={overview.debtNote}
             />
             <Stat label="LVR" value={overview.lvrLabel} />
+          </Grid>
+
+          <h3 style={{ fontSize: 14, fontWeight: 600, margin: '22px 0 12px' }}>Cost basis &amp; capital growth</h3>
+          <Grid columns={4}>
+            <Stat
+              label="Purchase price"
+              value={formatMoney(capitalGrowth.purchasePrice)}
+              meta={settledOnLabel ? `Settled ${settledOnLabel}` : 'Settlement date not recorded'}
+            />
+            <Stat
+              label="Settlement costs"
+              value={formatMoney(capitalGrowth.settlementCosts)}
+              meta="Stamp duty, legal fees"
+            />
+            <Stat
+              label="Total cost basis"
+              value={formatMoney(capitalGrowth.totalCostBasis)}
+              meta="Purchase price + settlement costs"
+            />
+            <Stat
+              label="Current valuation"
+              value={formatMoney(capitalGrowth.currentValuation)}
+              meta={overview.valuationLabel}
+            />
+            <Stat
+              label="Net capital growth"
+              value={formatMoney(capitalGrowth.growthAmount, { signed: true })}
+              valueStyle={growthStyle}
+              meta={growthMeta}
+            />
           </Grid>
         </CardBody>
       ) : tab === 'valuations' ? (

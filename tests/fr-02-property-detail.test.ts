@@ -11,9 +11,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // in a unit test. The cache behaviour is Next's; what matters here is the write.
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
-import { addComponentAction } from '@/modules/properties/actions';
+import { addComponentAction, createPropertyAction } from '@/modules/properties/actions';
 import { dashboardService } from '@/modules/dashboard/service';
-import type { PropertyComponent } from '@/modules/properties/model';
+import type { Property, PropertyComponent } from '@/modules/properties/model';
 import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
 import { propertyLinksService } from '@/modules/dashboard/property-links';
 import { propertiesService } from '@/modules/properties/service';
@@ -22,6 +22,8 @@ import { loansService } from '@/modules/loans/service';
 import { obligationsService } from '@/modules/obligations/service';
 import { documentsRepository } from '@/modules/documents/repository';
 import { PROPERTY_IDS } from '@/modules/properties/data/seed';
+import { ENTITY_IDS } from '@/modules/entities/data/seed';
+import { fromMajorUnits } from '@/shared/lib/money';
 import { resolveAsOfDate } from '@/shared/config/app-config';
 
 const asOf = resolveAsOfDate();
@@ -178,5 +180,108 @@ describe('FR-02 / BR-02 · adding a room or component', () => {
 
     expect(propertiesService.valuationStatus(PROPERTY_IDS.miansRd, asOf).valuation?.amount).toEqual(valuationBefore);
     expect(dashboardService.totalAssets(asOf)).toEqual(assetsBefore);
+  });
+});
+
+describe('FR-02 · purchase price, settlement costs and capital growth', () => {
+  const idle = IDLE_RESULT as ActionResult<unknown>;
+
+  function formOf(fields: Record<string, string>): FormData {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.append(key, value);
+    return form;
+  }
+
+  it('measures growth against purchase price plus settlement costs', () => {
+    // Hand-derived: Compton Rd cost 812,000 + 34,500 = 846,500 and is valued at
+    // 1,180,000, so growth is 333,500 — not the 368,000 that ignoring costs gives.
+    const growth = propertiesService.capitalGrowth(PROPERTY_IDS.comptonRd, asOf);
+
+    expect(growth.purchasePrice).toEqual(fromMajorUnits(812_000));
+    expect(growth.settlementCosts).toEqual(fromMajorUnits(34_500));
+    expect(growth.settledOn).toBe('2021-03-12');
+    expect(growth.totalCostBasis).toEqual(fromMajorUnits(846_500));
+    expect(growth.currentValuation).toEqual(fromMajorUnits(1_180_000));
+    expect(growth.growthAmount).toEqual(fromMajorUnits(333_500));
+    expect(growth.growthPercent).toBeCloseTo(333_500 / 846_500, 10);
+    expect(growth.growthPercent).toBeGreaterThan(0);
+  });
+
+  it('uses the valuation current at the as-of date, not a later one', () => {
+    // On 2025-01-01 the newest Compton Rd valuation is the July 2024 bank figure.
+    const growth = propertiesService.capitalGrowth(PROPERTY_IDS.comptonRd, '2025-01-01');
+
+    expect(growth.currentValuation).toEqual(fromMajorUnits(1_040_000));
+    expect(growth.growthAmount).toEqual(fromMajorUnits(193_500));
+  });
+
+  it('reports a loss when the valuation has not covered settlement costs', () => {
+    // Mians Rd is still carried at its 760,000 purchase price, so the 28,000 of
+    // settlement costs shows up as negative growth.
+    const growth = propertiesService.capitalGrowth(PROPERTY_IDS.miansRd, asOf);
+
+    expect(growth.totalCostBasis).toEqual(fromMajorUnits(788_000));
+    expect(growth.growthAmount).toEqual(fromMajorUnits(-28_000));
+    expect(growth.growthPercent).toBeLessThan(0);
+  });
+
+  it('returns nulls, never zeros, when no purchase price is recorded', () => {
+    const growth = propertiesService.capitalGrowth(PROPERTY_IDS.loganReserve, asOf);
+
+    expect(growth.purchasePrice).toBeNull();
+    expect(growth.totalCostBasis).toBeNull();
+    expect(growth.currentValuation).toEqual(fromMajorUnits(318_000));
+    expect(growth.growthAmount).toBeNull();
+    expect(growth.growthPercent).toBeNull();
+  });
+
+  it('persists purchase price and settlement costs when a property is created', async () => {
+    const result = await createPropertyAction(
+      idle,
+      formOf({
+        name: '14 Watson Rd, Acacia Ridge',
+        ownerEntityId: ENTITY_IDS.familyTrust,
+        settledOn: '2021-03-15',
+        purchasePrice: '$760,000',
+        settlementCosts: '28,000.00',
+      }),
+    );
+
+    if (!result.ok) throw new Error(`expected success, got: ${result.message}`);
+    const created = result.value as Property;
+    const stored = propertiesRepository.find(created.id);
+
+    expect(stored?.purchasePrice).toEqual(fromMajorUnits(760_000));
+    expect(stored?.settlementCosts).toEqual(fromMajorUnits(28_000));
+    expect(stored?.settledOn).toBe('2021-03-15');
+
+    // No valuation yet: the basis is known, the growth is not.
+    const growth = propertiesService.capitalGrowth(created.id, asOf);
+    expect(growth.totalCostBasis).toEqual(fromMajorUnits(788_000));
+    expect(growth.growthAmount).toBeNull();
+  });
+
+  it('leaves the cost fields absent when the form omits them', async () => {
+    const result = await createPropertyAction(
+      idle,
+      formOf({ name: '9 Example St', ownerEntityId: ENTITY_IDS.familyTrust, purchasePrice: '', settlementCosts: '' }),
+    );
+
+    if (!result.ok) throw new Error(`expected success, got: ${result.message}`);
+    const stored = propertiesRepository.find((result.value as Property).id);
+    expect(stored?.purchasePrice).toBeUndefined();
+    expect(stored?.settlementCosts).toBeUndefined();
+  });
+
+  it('rejects a purchase price of zero and marks the field', async () => {
+    const before = propertiesRepository.list().length;
+    const result = await createPropertyAction(
+      idle,
+      formOf({ name: '9 Example St', ownerEntityId: ENTITY_IDS.familyTrust, purchasePrice: '0' }),
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.fieldErrors?.purchasePrice).toBeDefined();
+    expect(propertiesRepository.list()).toHaveLength(before);
   });
 });

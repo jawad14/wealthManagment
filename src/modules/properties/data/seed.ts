@@ -32,6 +32,8 @@ export function seedProperties(): readonly Property[] {
       holdingNote:
         'Held by Siddique Family Trust (corporate trustee: Esteem Development Pty Ltd) · settled 12 Mar 2021',
       settledOn: '2021-03-12',
+      purchasePrice: fromMajorUnits(812_000),
+      settlementCosts: fromMajorUnits(34_500),
       consolidationMethodChosen: true,
     },
     {
@@ -43,6 +45,8 @@ export function seedProperties(): readonly Property[] {
       ownershipLabel: 'Esteem Development · 100%',
       holdingNote: 'Held by Esteem Development Pty Ltd · settled 19 Jul 2022',
       settledOn: '2022-07-19',
+      purchasePrice: fromMajorUnits(795_000),
+      settlementCosts: fromMajorUnits(33_200),
       consolidationMethodChosen: true,
     },
     {
@@ -54,6 +58,8 @@ export function seedProperties(): readonly Property[] {
       ownershipLabel: 'Jawad & Mahvish · 50/50',
       holdingNote: 'Held jointly by Jawad Siddique and Mahvish Gull · settled 30 Sep 2019',
       settledOn: '2019-09-30',
+      purchasePrice: fromMajorUnits(640_000),
+      settlementCosts: fromMajorUnits(24_800),
       // Jointly held 50/50 across two individuals; how it consolidates is undecided.
       consolidationMethodChosen: false,
     },
@@ -66,6 +72,8 @@ export function seedProperties(): readonly Property[] {
       ownershipLabel: 'Siddique Family Trust · 100%',
       holdingNote: 'Held by Siddique Family Trust · settled 2 May 2023',
       settledOn: '2023-05-02',
+      purchasePrice: fromMajorUnits(760_000),
+      settlementCosts: fromMajorUnits(28_000),
       consolidationMethodChosen: true,
     },
     {

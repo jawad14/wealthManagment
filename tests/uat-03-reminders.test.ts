@@ -6,7 +6,15 @@
  * does not duplicate sends. Failure creates an owner task. External messages
  * require verified recipients and approved templates."
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// The dispatch action calls revalidatePath, which needs a request scope that
+// does not exist in a unit test.
+vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+
+import { runReminderDispatchAction } from '@/modules/obligations/actions';
+import { accessService } from '@/modules/access/service';
+import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
 import { obligationsService } from '@/modules/obligations/service';
 import { obligationsRepository } from '@/modules/obligations/repository';
 import { OBLIGATION_IDS } from '@/modules/obligations/data/seed';
@@ -224,6 +232,76 @@ describe('FR-08 / UAT-03 · reminder dispatch', () => {
       .runReminderJob('2026-08-01', 8)
       .map((result) => result.obligationId);
     expect(selected).not.toContain(OBLIGATION_IDS.insuranceCompton);
+  });
+
+  describe('"Run reminder dispatch" action', () => {
+    interface Summary {
+      readonly processed: number;
+      readonly sent: number;
+      readonly skipped: number;
+      readonly skippedByReason: Readonly<Record<string, number>>;
+    }
+
+    const run = async (): Promise<{ result: ActionResult<unknown>; summary: Summary }> => {
+      const form = new FormData();
+      form.append('asOf', AS_OF);
+      const result = await runReminderDispatchAction(IDLE_RESULT as ActionResult<unknown>, form);
+      if (!result.ok) throw new Error(`dispatch action failed: ${result.message}`);
+      return { result, summary: result.value as Summary };
+    };
+
+    it('returns a successful result that summarises the run, and audits it', async () => {
+      const { result, summary } = await run();
+
+      expect(result.ok).toBe(true);
+      expect(summary.sent).toBeGreaterThan(0);
+      expect(summary.sent + summary.skipped).toBe(summary.processed);
+      expect(result.message).toBe(
+        `Reminder job completed: ${summary.sent} sent, ${summary.skipped} cancelled/skipped`,
+      );
+      expect(
+        accessService.listAuditEvents().some((event) => event.summary.startsWith('Reminder dispatch run')),
+      ).toBe(true);
+    });
+
+    it('idempotently skips reminders that an earlier run already sent', async () => {
+      const first = await run();
+      const sendsAfterFirst = sentCount(OBLIGATION_IDS.pestCompton);
+
+      const second = await run();
+
+      expect(second.result.ok).toBe(true);
+      expect(second.summary.sent).toBe(0);
+      expect(second.summary.skippedByReason['already-sent']).toBe(first.summary.sent);
+      expect(sentCount(OBLIGATION_IDS.pestCompton)).toBe(sendsAfterFirst);
+    });
+
+    it('cancels reminders for an item paid before the run', async () => {
+      // Pest treatment falls due 8 Sep, so it is inside its notice window on 6 Sep.
+      obligationsService.recordPayment({
+        obligationId: OBLIGATION_IDS.pestCompton,
+        paidOn: AS_OF,
+        documentId: 'doc-receipt',
+        actor: USER_IDS.jawad,
+      });
+      const sendsBefore = sentCount(OBLIGATION_IDS.pestCompton);
+
+      const { summary } = await run();
+
+      expect(summary.skippedByReason.paid).toBeGreaterThan(0);
+      expect(sentCount(OBLIGATION_IDS.pestCompton)).toBe(sendsBefore);
+      const events = obligationsRepository.listReminders(OBLIGATION_IDS.pestCompton);
+      expect(events.some((event) => event.outcome === 'cancelled')).toBe(true);
+    });
+
+    it('rejects a malformed date without throwing', async () => {
+      const form = new FormData();
+      form.append('asOf', 'next tuesday');
+
+      const result = await runReminderDispatchAction(IDLE_RESULT as ActionResult<unknown>, form);
+
+      expect(result.ok).toBe(false);
+    });
   });
 
   it('separates channels — an email send does not suppress the in-app notice', () => {

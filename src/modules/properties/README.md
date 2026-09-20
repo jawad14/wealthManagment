@@ -12,6 +12,12 @@ components (rooms). Covers FR-02.
   never eligible however recent they are.
 - Stale valuations are still **displayed** — the portfolio should not lose an
   asset because its paperwork aged — but they must not drive a ratio.
+- **Capital growth is derived, never stored** (`propertiesService.capitalGrowth`):
+  latest valuation less the cost basis, where the basis is purchase price *plus*
+  settlement costs. A missing purchase price or valuation gives `null`, never 0.
+  It uses the latest valuation even when stale — it is a display figure, not a
+  ratio input — so a property still carried at purchase price reads as down by
+  its settlement costs.
 
 **Owns** — `Property`, `Valuation`, `PropertyComponent`.
 

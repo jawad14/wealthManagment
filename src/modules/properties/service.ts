@@ -7,6 +7,7 @@
  */
 import { NotFoundError, ValidationError } from '@/shared/lib/errors';
 import { formatDateShort, formatMonthShort, monthsBetween, toDate } from '@/shared/lib/dates';
+import { addMoney, subtractMoney } from '@/shared/lib/money';
 import { STALE_VALUATION_MONTHS } from '@/shared/config/app-config';
 import type { IsoDate, PropertyId } from '@/shared/types/common';
 import { entitiesService } from '@/modules/entities/service';
@@ -15,6 +16,7 @@ import {
   isMarketBasis,
   VALUATION_BASIS_LABELS,
   VALUATION_BASIS_LONG_LABELS,
+  type CapitalGrowth,
   type ComponentKind,
   type Occupancy,
   type OwnershipGap,
@@ -93,6 +95,40 @@ export const propertiesService = {
       `${formatDateShort(valuation.valuedOn)} ${date.getUTCFullYear()}`,
       `confidence ${valuation.confidence}`,
     ].join(' · ');
+  },
+
+  /**
+   * Capital growth: the current valuation against what the property cost (FR-02).
+   *
+   * The cost basis includes settlement costs, so growth is net of stamp duty and
+   * legal fees rather than flattered by leaving them out. Without a purchase
+   * price there is no basis, and without a valuation there is nothing to compare
+   * it to — either way the growth figures are null, never zero.
+   */
+  capitalGrowth(propertyId: PropertyId, asOf: IsoDate): CapitalGrowth {
+    const property = propertiesService.require(propertyId);
+    const purchasePrice = property.purchasePrice ?? null;
+    const settlementCosts = property.settlementCosts ?? null;
+    const currentValuation = propertiesRepository.latestValuation(propertyId, asOf)?.amount ?? null;
+
+    const totalCostBasis =
+      purchasePrice === null ? null : settlementCosts === null ? purchasePrice : addMoney(purchasePrice, settlementCosts);
+    const growthAmount =
+      totalCostBasis === null || currentValuation === null ? null : subtractMoney(currentValuation, totalCostBasis);
+    const growthPercent =
+      growthAmount === null || totalCostBasis === null || totalCostBasis.cents <= 0
+        ? null
+        : growthAmount.cents / totalCostBasis.cents;
+
+    return {
+      purchasePrice,
+      settlementCosts,
+      settledOn: property.settledOn ?? null,
+      totalCostBasis,
+      currentValuation,
+      growthAmount,
+      growthPercent,
+    };
   },
 
   /** Properties whose newest valuation has aged past the staleness window. */

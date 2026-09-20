@@ -7,7 +7,7 @@ import { leasesRepository } from '@/modules/leases/repository';
 import { propertyLinksService } from '@/modules/dashboard/property-links';
 import { PropertyDetail, type RoomRow } from '@/modules/properties/components/PropertyDetail';
 import { FREQUENCY_LABELS } from '@/modules/leases/model';
-import { formatDateCompact, formatDateShort } from '@/shared/lib/dates';
+import { formatDateCompact, formatDateLong, formatDateShort } from '@/shared/lib/dates';
 import { asId } from '@/shared/types/common';
 import { isAppError } from '@/shared/lib/errors';
 
@@ -77,6 +77,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       componentNoun={property.rentalMode === 'by-room' ? 'Room' : 'Component'}
       valuationDetail={propertiesService.valuationDetailLabel(property.id, asOf)}
       valuationAmount={valuation.valuation?.amount ?? null}
+      capitalGrowth={propertiesService.capitalGrowth(property.id, asOf)}
+      settledOnLabel={property.settledOn ? formatDateLong(property.settledOn) : null}
       propertyId={property.id}
       today={asOf}
     />

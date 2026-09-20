@@ -10,9 +10,22 @@ import { ValidationError } from '@/shared/lib/errors';
 import { accessService } from '@/modules/access/service';
 import { obligationsService } from './service';
 import { obligationsRepository } from './repository';
-import type { Obligation, Recurrence } from './model';
+import { resolveAsOfDate } from '@/shared/config/app-config';
+import type { IsoDate } from '@/shared/types/common';
+import type { Obligation, Recurrence, SkipReason } from './model';
 
 const RECURRENCES: readonly Recurrence[] = ['once', 'monthly', 'quarterly', 'yearly'];
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** What one run of the reminder job did, for the toast and the audit trail. */
+interface ReminderDispatchSummary {
+  readonly asOf: IsoDate;
+  readonly processed: number;
+  readonly sent: number;
+  readonly skipped: number;
+  readonly skippedByReason: Partial<Record<SkipReason, number>>;
+}
 
 /** Every obligations screen reads from these two paths. */
 function revalidate(): void {
@@ -111,6 +124,58 @@ export async function updateReminderAction(
     revalidate();
     return updated;
   });
+}
+
+/**
+ * Run the reminder job on demand and report what it did (FR-08).
+ *
+ * Nothing schedules the job in this build, so this button is the only thing
+ * that runs it. The job is idempotent, so pressing it twice sends nothing new.
+ */
+export async function runReminderDispatchAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction(
+    (summary: ReminderDispatchSummary) =>
+      `Reminder job completed: ${summary.sent} sent, ${summary.skipped} cancelled/skipped`,
+    () => {
+      const asOf = readString(form, 'asOf') ?? resolveAsOfDate();
+      if (!ISO_DATE.test(asOf) || Number.isNaN(Date.parse(asOf))) {
+        throw new ValidationError('The dispatch date is not a valid date.', {
+          fieldErrors: { asOf: ['Use a date in the form 2026-09-06.'] },
+        });
+      }
+
+      const results = obligationsService.runReminderJob(asOf);
+
+      const skippedByReason: Partial<Record<SkipReason, number>> = {};
+      for (const result of results) {
+        if (result.skipReason) {
+          skippedByReason[result.skipReason] = (skippedByReason[result.skipReason] ?? 0) + 1;
+        }
+      }
+      const sent = results.filter((result) => result.sent).length;
+      const summary: ReminderDispatchSummary = {
+        asOf,
+        processed: results.length,
+        sent,
+        skipped: results.length - sent,
+        skippedByReason,
+      };
+
+      const reasons = Object.entries(skippedByReason)
+        .map(([reason, count]) => `${count} ${reason}`)
+        .join(', ');
+      accessService.record({
+        actor: accessService.getCurrentUser().name,
+        summary: `Reminder dispatch run · ${summary.sent} sent, ${summary.skipped} cancelled/skipped`,
+        context: `As of ${asOf} · ${summary.processed} processed${reasons ? ` · skipped: ${reasons}` : ''}`,
+      });
+      revalidate();
+      return summary;
+    },
+  );
 }
 
 /** Create an obligation (FR-03). */

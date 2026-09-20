@@ -140,6 +140,21 @@ export async function createPropertyAction(
     const settledOn = readString(form, 'settledOn');
     const propertyId = asId<'Property'>(`prop-${randomUUID()}`);
 
+    // Both are optional — empty means "not recorded", which is not the same as
+    // zero — but a figure that is entered has to make sense.
+    const purchasePrice = readAmount(form, 'purchasePrice');
+    if (purchasePrice !== undefined && purchasePrice <= 0) {
+      throw new ValidationError('Enter a purchase price greater than zero.', {
+        fieldErrors: { purchasePrice: ['A purchase price must be greater than zero.'] },
+      });
+    }
+    const settlementCosts = readAmount(form, 'settlementCosts');
+    if (settlementCosts !== undefined && settlementCosts < 0) {
+      throw new ValidationError('Settlement costs cannot be negative.', {
+        fieldErrors: { settlementCosts: ['Enter zero or more.'] },
+      });
+    }
+
     const property: Property = {
       id: propertyId,
       name,
@@ -149,6 +164,8 @@ export async function createPropertyAction(
       ownershipLabel: `${owner.name} · ${share}%`,
       holdingNote: `Held by ${owner.name}${settledOn ? ` · settled ${settledOn}` : ''}`,
       ...(settledOn ? { settledOn } : {}),
+      ...(purchasePrice !== undefined ? { purchasePrice: fromMajorUnits(purchasePrice) } : {}),
+      ...(settlementCosts !== undefined ? { settlementCosts: fromMajorUnits(settlementCosts) } : {}),
       // A newly-added property has no agreed consolidation method yet, so it is
       // surfaced as an ownership gap rather than silently assumed.
       consolidationMethodChosen: false,

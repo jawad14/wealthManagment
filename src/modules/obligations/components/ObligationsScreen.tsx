@@ -3,11 +3,13 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/shared/components/Button';
 import { FilterGroup } from '@/shared/components/FilterGroup';
-import { Grid, Stack, Toolbar } from '@/shared/components/Layout';
+import { ActionForm } from '@/shared/components/ActionForm';
+import { Grid, Row, Stack, Toolbar } from '@/shared/components/Layout';
 import type { TimelineEntry } from '@/shared/components/Timeline';
 import { ObligationsTable } from './ObligationsTable';
 import { ObligationDetail } from './ObligationDetail';
 import { NewObligationForm } from './NewObligationForm';
+import { runReminderDispatchAction } from '../actions';
 import type { ObligationFilter, ObligationView } from '../service';
 
 export interface NamedRecord {
@@ -75,9 +77,18 @@ export function ObligationsScreen({
           value={filter}
           onChange={setFilter}
         />
-        <Button variant="primary" onClick={() => setCreating(true)}>
-          + New obligation
-        </Button>
+        <Row>
+          <ActionForm
+            action={runReminderDispatchAction}
+            submitLabel="Run reminder dispatch"
+            submitVariant="default"
+            render="inline"
+            hiddenFields={{ asOf: today }}
+          />
+          <Button variant="primary" onClick={() => setCreating(true)}>
+            + New obligation
+          </Button>
+        </Row>
       </Toolbar>
 
       <Grid columns={2}>
