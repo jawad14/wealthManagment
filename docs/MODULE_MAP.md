@@ -48,6 +48,7 @@ code.
 | Permission-filtered CSV export | `dashboard/exports.ts` |
 | Reminder idempotency | `obligations` (`buildDispatchKey`) |
 | What the top-bar search matches, and who may see it | `search` |
+| What the top-bar bell lists, and who may see it | `dashboard/notifications.ts` |
 | Net worth, assets, liabilities | `dashboard` |
 | Per-entity consolidated position | `dashboard` |
 

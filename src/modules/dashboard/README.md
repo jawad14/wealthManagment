@@ -32,6 +32,12 @@ scoped, because snapshots are portfolio-wide. Cash flow, arrears, obligations an
 the attention strip carry no entity dimension and stay whole-portfolio; the page
 says so in a banner. The `/api/dashboard*` routes accept the same `entityId`.
 
+**Notifications** — `notifications.ts` exports `getNotifications(asOf, scope)`, the feed
+behind the top bar's bell: overdue rent, overdue obligations, obligations due
+within 14 days, and one rolled-up reminder for unmatched bank rows. Derived on
+read and permission-filtered the same way search is. Wire types live in
+`shared/types/notifications.ts` because the shell may not import a module.
+
 **Not yet implemented** — scope switching by property/period, entity-scoped
 drill-down ("Explain this total" is withheld on scoped tiles), snapshot creation
 on period close.

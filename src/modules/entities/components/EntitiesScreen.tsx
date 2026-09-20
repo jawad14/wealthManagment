@@ -9,8 +9,10 @@ import { ActionForm, firstError } from '@/shared/components/ActionForm';
 import { Grid, Stack, Sub, Toolbar } from '@/shared/components/Layout';
 import { createEntityAction, createRelationshipAction } from '../actions';
 import { EntityList, type EntityRow } from './EntityList';
+import { EntityBreakdownCard } from './EntityBreakdownCard';
 import { OwnershipMap } from './OwnershipMap';
-import type { EntityFilter } from '../service';
+import type { EntityId } from '@/shared/types/common';
+import type { EntityFilter, EntityHoldings } from '../service';
 import type { RelationKind } from '../model';
 
 const FILTER_OPTIONS: readonly { value: EntityFilter; label: string }[] = [
@@ -40,6 +42,8 @@ interface NamedOption {
 export interface EntitiesScreenProps {
   readonly rowsByFilter: Record<EntityFilter, readonly EntityRow[]>;
   readonly counts: Record<EntityFilter, number>;
+  /** Each entity's property balance sheet, keyed by entity id, for the breakdown card. */
+  readonly holdingsByEntity: Readonly<Record<string, EntityHoldings>>;
   /** Options for the relationship form's subject and entity target. */
   readonly entities: readonly NamedOption[];
   /** Options for the relationship form's property target. */
@@ -49,13 +53,26 @@ export interface EntitiesScreenProps {
 }
 
 /** FR-01, BR-02 — entities, relationships and the ownership map. */
-export function EntitiesScreen({ rowsByFilter, counts, entities, properties, today }: EntitiesScreenProps) {
+export function EntitiesScreen({
+  rowsByFilter,
+  counts,
+  holdingsByEntity,
+  entities,
+  properties,
+  today,
+}: EntitiesScreenProps) {
   const [filter, setFilter] = useState<EntityFilter>('all');
   const [isCreating, setCreating] = useState(false);
   const [isCreatingRelation, setCreatingRelation] = useState(false);
   const [subjectId, setSubjectId] = useState(entities[0]?.id ?? '');
   const [relationKind, setRelationKind] = useState<RelationKind>('owns');
   const [targetType, setTargetType] = useState<TargetType>('property');
+
+  const [selectedEntityId, setSelectedEntityId] = useState<EntityId | undefined>(rowsByFilter.all[0]?.entry.entity.id);
+
+  // Looked up in the unfiltered list so a filter change never drops the selection.
+  const selected = rowsByFilter.all.find((row) => row.entry.entity.id === selectedEntityId);
+  const selectedHoldings = selectedEntityId ? holdingsByEntity[selectedEntityId] : undefined;
 
   // An entity cannot be related to itself.
   const targetEntities = entities.filter((entity) => entity.id !== subjectId);
@@ -93,7 +110,7 @@ export function EntitiesScreen({ rowsByFilter, counts, entities, properties, tod
       </Toolbar>
 
       <Grid columns={2}>
-        <EntityList rows={rowsByFilter[filter]} />
+        <EntityList rows={rowsByFilter[filter]} selectedId={selectedEntityId} onSelect={setSelectedEntityId} />
 
         {isCreating ? (
           <Card>
@@ -227,7 +244,12 @@ export function EntitiesScreen({ rowsByFilter, counts, entities, properties, tod
             </CardBody>
           </Card>
         ) : (
-          <OwnershipMap />
+          <Stack>
+            {selected && selectedHoldings ? (
+              <EntityBreakdownCard entity={selected.entry.entity} holdings={selectedHoldings} />
+            ) : null}
+            <OwnershipMap />
+          </Stack>
         )}
       </Grid>
     </Stack>

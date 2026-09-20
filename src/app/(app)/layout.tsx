@@ -8,6 +8,7 @@ import { sharedBillsService } from '@/modules/shared-bills/service';
 import { initialsOf } from '@/shared/components/Avatar';
 import { ROLE_LABELS } from '@/modules/access/model';
 import { dashboardService } from '@/modules/dashboard/service';
+import { getNotifications } from '@/modules/dashboard/notifications';
 import { switchUserAction } from '@/modules/access/actions';
 import type { AccessRole } from '@/modules/access/model';
 
@@ -56,7 +57,7 @@ export default function AppLayout({ children }: { readonly children: ReactNode }
         ];
       })}
       switchUserAction={switchUserAction}
-      unreadNotifications={3}
+      notifications={getNotifications(asOfDate)}
     >
       {children}
     </AppShell>

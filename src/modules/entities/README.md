@@ -18,9 +18,16 @@ canonical `PROPERTY_IDS` used by the ownership graph.
 **Depended on by** — `properties` (ownership gaps), `dashboard` (consolidation),
 `loans` (borrower names), `obligations` (holding entity labels).
 
-**Deliberately does not** — compute money. It resolves *who owns how much of
-what*; the `dashboard` module multiplies those claims by valuations and debt.
+**Deliberately does not** — read valuations or loans. It resolves *who owns how
+much of what*; the `dashboard` module multiplies those claims by valuations and debt.
 Keeping them apart makes the ownership rules testable without any valuation data.
+
+**The one exception** — `entitiesService.entityHoldings(entityId, asOf, sources)`
+does the per-entity balance-sheet arithmetic (assets by share, debt by borrower),
+but `properties` and `loans` sit *above* this module, so the valuations and
+facilities arrive as a `HoldingsSources` argument. Call
+`dashboardService.entityHoldings(entityId, asOf)` for the wired-up version; never
+import `properties` or `loans` here.
 
 **Key files** — `model.ts`, `data/seed.ts`, `repository.ts`, `service.ts`,
 `validation.ts`, `api.ts`, `components/`.

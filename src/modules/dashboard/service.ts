@@ -12,7 +12,7 @@ import { endOfMonth, formatMonthShort, recentMonths, startOfMonth } from '@/shar
 import { addMoney, money, scaleMoney, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
 import { UPCOMING_WINDOW_DAYS } from '@/shared/config/app-config';
 import type { EntityId, IsoDate } from '@/shared/types/common';
-import { entitiesService } from '@/modules/entities/service';
+import { entitiesService, type EntityHoldings } from '@/modules/entities/service';
 import { propertiesService } from '@/modules/properties/service';
 import { loansService } from '@/modules/loans/service';
 import { loansRepository } from '@/modules/loans/repository';
@@ -149,6 +149,29 @@ export const dashboardService = {
         shareOfTotal: 0,
       }
     );
+  },
+
+  /**
+   * An entity's property balance sheet (FR-01, BR-02).
+   *
+   * The arithmetic lives in the entities module; this supplies the valuations
+   * and facilities it cannot import. A pool spreads across its properties only
+   * under an equal-split policy — otherwise the debt is attributed to the
+   * borrower but to no single property, as `loansService.debtForProperty` does.
+   */
+  entityHoldings(entityId: EntityId, asOf: IsoDate): EntityHoldings {
+    return entitiesService.entityHoldings(entityId, asOf, {
+      propertyNameOf: (propertyId) => propertiesService.require(propertyId).name,
+      valuationOf: (propertyId, on) => propertiesService.valuationStatus(propertyId, on).valuation?.amount ?? null,
+      facilities: loansRepository.listLiabilities().map((loan) => ({
+        borrowerEntityIds: loan.borrowerEntityIds,
+        balance: loan.balance,
+        security:
+          loan.security.kind === 'pool' && loan.allocationPolicy?.kind !== 'equal-split'
+            ? []
+            : loan.security.propertyIds.map((propertyId) => ({ propertyId, weight: 1 })),
+      })),
+    });
   },
 
   /**

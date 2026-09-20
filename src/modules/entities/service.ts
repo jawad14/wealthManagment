@@ -5,8 +5,12 @@
  * *who owns what and by how much*. The `dashboard` module combines these claims
  * with property values and loan balances to produce monetary totals, which keeps
  * the ownership rules testable in isolation.
+ *
+ * `entityHoldings` is the one place money appears, and it still reads no
+ * valuation or loan itself: the caller hands those in as `HoldingsSources`.
  */
 import { NotFoundError } from '@/shared/lib/errors';
+import { addMoney, allocateMoney, money, scaleMoney, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
 import type { EntityId, IsoDate, PropertyId } from '@/shared/types/common';
 import { entitiesRepository } from './repository';
 import {
@@ -29,6 +33,52 @@ export interface EntityWithRelationships {
 }
 
 export type EntityFilter = 'all' | EntityKind;
+
+/** One facility an entity may be a borrower of, as seen by `entityHoldings`. */
+export interface HoldingsFacility {
+  readonly borrowerEntityIds: readonly EntityId[];
+  /** Positive magnitude owed. Receivables are assets and must not be passed. */
+  readonly balance: Money;
+  /**
+   * Properties securing the facility with their relative allocation weights.
+   * Empty for unsecured debt, and for a pool with no allocation policy — that
+   * debt still counts against the borrower, but against no single property.
+   */
+  readonly security: readonly { readonly propertyId: PropertyId; readonly weight: number }[];
+}
+
+/**
+ * Valuation and debt lookups `entityHoldings` needs.
+ *
+ * `properties` and `loans` sit above this module in the dependency order, so
+ * the caller supplies them. `dashboardService.entityHoldings` is the wired-up
+ * entry point.
+ */
+export interface HoldingsSources {
+  propertyNameOf(propertyId: PropertyId): string;
+  /** The valuation effective on `asOf`, or null when the property has none. */
+  valuationOf(propertyId: PropertyId, asOf: IsoDate): Money | null;
+  readonly facilities: readonly HoldingsFacility[];
+}
+
+export interface EntityHolding {
+  readonly propertyId: PropertyId;
+  readonly propertyName: string;
+  /** 0–100. */
+  readonly sharePercent: number;
+  /** Valuation × share. Zero when the property has no valuation. */
+  readonly attributedValue: Money;
+  /** This entity's borrowed debt that is secured against the property. */
+  readonly debt: Money;
+}
+
+export interface EntityHoldings {
+  readonly grossAssets: Money;
+  /** Everything the entity borrowed, including debt secured on no holding of its own. */
+  readonly attributedDebt: Money;
+  readonly netEquity: Money;
+  readonly holdings: readonly EntityHolding[];
+}
 
 export const entitiesService = {
   listEntities(): readonly Entity[] {
@@ -117,6 +167,56 @@ export const entitiesService = {
       .listEntities()
       .filter((entity) => entity.consolidation === method)
       .map((entity) => entity.id);
+  },
+
+  /**
+   * One entity's balance sheet over the properties it directly owns (BR-02).
+   *
+   * Assets follow ownership share; debt follows the borrower, split evenly
+   * between a facility's consolidated borrowers — the same attribution the
+   * dashboard's ownership positions use, so the two views reconcile. A
+   * borrower's part of a facility is then spread across the securing
+   * properties by weight, and only lands on a holding the entity owns.
+   */
+  entityHoldings(entityId: EntityId, asOf: IsoDate, sources: HoldingsSources): EntityHoldings {
+    entitiesService.requireEntity(entityId);
+    const consolidated = entitiesService.consolidatedEntityIds();
+
+    let attributedDebt = money(0);
+    const debtByProperty = new Map<PropertyId, Money>();
+
+    sources.facilities.forEach((facility) => {
+      const holders = facility.borrowerEntityIds.filter((id) => consolidated.includes(id));
+      const index = holders.indexOf(entityId);
+      if (index === -1) return;
+
+      const borrowed = allocateMoney(facility.balance, holders.map(() => 1))[index] ?? money(0);
+      attributedDebt = addMoney(attributedDebt, borrowed);
+
+      if (facility.security.length === 0) return;
+      const parts = allocateMoney(borrowed, facility.security.map((entry) => entry.weight));
+      facility.security.forEach((entry, position) => {
+        const part = parts[position] ?? money(0);
+        debtByProperty.set(entry.propertyId, addMoney(debtByProperty.get(entry.propertyId) ?? money(0), part));
+      });
+    });
+
+    const holdings = entitiesService
+      .resolveOwnershipClaims(asOf)
+      .filter((claim) => claim.ownerEntityId === entityId)
+      .map<EntityHolding>((claim) => {
+        const valuation = sources.valuationOf(claim.propertyId, asOf);
+        return {
+          propertyId: claim.propertyId,
+          propertyName: sources.propertyNameOf(claim.propertyId),
+          sharePercent: claim.share * 100,
+          attributedValue: valuation ? scaleMoney(valuation, claim.share) : money(0),
+          debt: debtByProperty.get(claim.propertyId) ?? money(0),
+        };
+      });
+
+    const grossAssets = sumMoney(holdings.map((holding) => holding.attributedValue));
+    return { grossAssets, attributedDebt, netEquity: subtractMoney(grossAssets, attributedDebt), holdings };
   },
 
   /** Human label for an entity id, used across other modules' views. */

@@ -16,6 +16,9 @@ import { dashboardService } from '@/modules/dashboard/service';
 import { ENTITY_IDS, PROPERTY_IDS } from '@/modules/entities/data/seed';
 import { IDLE_RESULT, type ActionResult } from '@/shared/lib/action-result';
 import { resolveAsOfDate } from '@/shared/config/app-config';
+import { NotFoundError } from '@/shared/lib/errors';
+import { fromMajorUnits } from '@/shared/lib/money';
+import { asId } from '@/shared/types/common';
 
 const idle = IDLE_RESULT as ActionResult<unknown>;
 const asOf = resolveAsOfDate();
@@ -108,5 +111,84 @@ describe('FR-01 / BR-02 · createRelationshipAction', () => {
     const netWorth = dashboardService.netWorth(asOf).netWorth.cents;
     expect(positions.reduce((total, position) => total + position.net.cents, 0)).toBe(netWorth);
     expect(netWorth).toBe(netWorthBefore);
+  });
+});
+
+/**
+ * Hand-derived from the seed, not from the code:
+ *  - Watson Rd is valued at $1,052,000 and held 50/50; Macquarie 4417 ($612,400)
+ *    names both owners as borrowers.
+ *  - The Family Trust owns Compton Rd ($1,180,000) and Mians Rd ($760,000)
+ *    outright and borrows ANZ 3305 ($410,300) against Mians Rd.
+ *  - Esteem owns Benton St ($940,000) and Lot 12 ($318,000) and borrows CBA 8820
+ *    ($1,184,000), pooled equally over Compton Rd and Benton St.
+ */
+describe('FR-01 / BR-02 · entityHoldings', () => {
+  const dollars = (amount: number) => fromMajorUnits(amount);
+
+  it('attributes half of a jointly-owned property and half of its joint loan', () => {
+    for (const owner of [ENTITY_IDS.jawad, ENTITY_IDS.mahvish]) {
+      const result = dashboardService.entityHoldings(owner, asOf);
+
+      expect(result.holdings).toEqual([
+        {
+          propertyId: PROPERTY_IDS.watsonRd,
+          propertyName: 'Watson Rd, Acacia Ridge',
+          sharePercent: 50,
+          attributedValue: dollars(526_000),
+          debt: dollars(306_200),
+        },
+      ]);
+      expect(result.grossAssets).toEqual(dollars(526_000));
+      expect(result.attributedDebt).toEqual(dollars(306_200));
+      expect(result.netEquity).toEqual(dollars(219_800));
+    }
+  });
+
+  it('attributes the whole value and debt of solely-owned properties', () => {
+    const result = dashboardService.entityHoldings(ENTITY_IDS.familyTrust, asOf);
+    const byProperty = new Map(result.holdings.map((holding) => [holding.propertyId, holding]));
+
+    expect(result.holdings).toHaveLength(2);
+    expect(byProperty.get(PROPERTY_IDS.comptonRd)?.sharePercent).toBe(100);
+    expect(byProperty.get(PROPERTY_IDS.comptonRd)?.attributedValue).toEqual(dollars(1_180_000));
+    // Compton Rd secures Esteem's facility, not the trust's — no debt lands here.
+    expect(byProperty.get(PROPERTY_IDS.comptonRd)?.debt).toEqual(dollars(0));
+    expect(byProperty.get(PROPERTY_IDS.miansRd)?.attributedValue).toEqual(dollars(760_000));
+    expect(byProperty.get(PROPERTY_IDS.miansRd)?.debt).toEqual(dollars(410_300));
+
+    expect(result.grossAssets).toEqual(dollars(1_940_000));
+    expect(result.attributedDebt).toEqual(dollars(410_300));
+    expect(result.netEquity).toEqual(dollars(1_529_700));
+  });
+
+  it('keeps a borrower liable for pooled debt secured on a property it does not own', () => {
+    const result = dashboardService.entityHoldings(ENTITY_IDS.esteem, asOf);
+    const benton = result.holdings.find((holding) => holding.propertyId === PROPERTY_IDS.bentonSt);
+
+    expect(benton?.debt).toEqual(dollars(592_000));
+    expect(result.grossAssets).toEqual(dollars(1_258_000));
+    expect(result.attributedDebt).toEqual(dollars(1_184_000));
+    expect(result.netEquity).toEqual(dollars(74_000));
+  });
+
+  it('reconciles with the consolidated positions: every dollar of debt appears once', () => {
+    const entities = entitiesService.listEntities();
+    const all = entities.map((entity) => dashboardService.entityHoldings(entity.id, asOf));
+
+    const debt = all.reduce((total, result) => total + result.attributedDebt.cents, 0);
+    expect(debt).toBe(dashboardService.totalLiabilities().cents);
+
+    entities.forEach((entity, index) => {
+      expect(all[index]!.attributedDebt).toEqual(dashboardService.positionOf(asOf, entity.id).liabilities);
+    });
+  });
+
+  it('returns an empty balance sheet for an entity with no interests, and refuses an unknown one', () => {
+    const result = dashboardService.entityHoldings(ENTITY_IDS.hassan, asOf);
+    expect(result.holdings).toEqual([]);
+    expect(result.netEquity).toEqual(dollars(0));
+
+    expect(() => dashboardService.entityHoldings(asId<'Entity'>('ent-nobody'), asOf)).toThrow(NotFoundError);
   });
 });

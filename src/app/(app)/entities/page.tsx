@@ -32,6 +32,12 @@ export default function EntitiesPage() {
     {} as Record<EntityFilter, readonly EntityRow[]>,
   );
 
+  // The breakdown card switches entity on the client, so every balance sheet is
+  // computed here once rather than fetched per click.
+  const holdingsByEntity = Object.fromEntries(
+    entitiesService.listEntities().map((entity) => [entity.id, dashboardService.entityHoldings(entity.id, asOf)]),
+  );
+
   // Options for the "Add relationship" form. Properties sit above entities in
   // the dependency order, so the page composes them rather than the module.
   const entities = entitiesService.listEntities().map((entity) => ({ id: entity.id, name: entity.name }));
@@ -41,6 +47,7 @@ export default function EntitiesPage() {
     <EntitiesScreen
       rowsByFilter={rowsByFilter}
       counts={entitiesService.countByKind()}
+      holdingsByEntity={holdingsByEntity}
       entities={entities}
       properties={properties}
       today={asOf}

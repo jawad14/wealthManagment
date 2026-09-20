@@ -26,7 +26,7 @@ export function AppShell({
   currentUserName,
   currentUserRole,
   asOfDate,
-  unreadNotifications,
+  notifications,
   currentUserInitials,
   currentUserRoleLabel,
   personas,
@@ -49,7 +49,7 @@ export function AppShell({
           <div className="main">
             <TopBar
               asOfDate={asOfDate}
-              unreadNotifications={unreadNotifications}
+              notifications={notifications}
               currentUserInitials={currentUserInitials}
               currentUserName={currentUserName}
               currentUserRoleLabel={currentUserRoleLabel}
