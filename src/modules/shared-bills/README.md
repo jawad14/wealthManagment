@@ -30,5 +30,11 @@ FR-07.
 **Tests** — `tests/fr-07-shared-bills.test.ts` covers the acceptance criteria
 (60/40 → $120/$80, no duplicate owner expense, invalid allocation rejected).
 
-**Not yet implemented** — creating bills and agreements through the UI, pushing
-recovered shares into the lease charge ledger, agreement approval workflow.
+- **A bill is charged to leases once.** `postSharesToLeases()` turns each
+  recoverable share into a `utility` charge on its lease (due on the bill's due
+  date) and stamps `postedToLeasesOn`; a second posting is a `ConflictError`. It
+  refuses a blocked bill, a bill with no recoverable share, and a bill whose
+  recovery has not been reviewed — a tenant is not charged on an assumption.
+
+**Not yet implemented** — creating agreements through the UI, agreement approval
+workflow, reversing a posting once it has been charged to a lease.

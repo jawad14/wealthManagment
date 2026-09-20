@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { resolveAsOfDate } from '@/shared/config/app-config';
 import { entitiesService, type EntityFilter } from '@/modules/entities/service';
+import { propertiesService } from '@/modules/properties/service';
 import { dashboardService } from '@/modules/dashboard/service';
 import { EntitiesScreen } from '@/modules/entities/components/EntitiesScreen';
 import type { EntityRow } from '@/modules/entities/components/EntityList';
@@ -31,5 +32,18 @@ export default function EntitiesPage() {
     {} as Record<EntityFilter, readonly EntityRow[]>,
   );
 
-  return <EntitiesScreen rowsByFilter={rowsByFilter} counts={entitiesService.countByKind()} />;
+  // Options for the "Add relationship" form. Properties sit above entities in
+  // the dependency order, so the page composes them rather than the module.
+  const entities = entitiesService.listEntities().map((entity) => ({ id: entity.id, name: entity.name }));
+  const properties = propertiesService.list().map((property) => ({ id: property.id, name: property.name }));
+
+  return (
+    <EntitiesScreen
+      rowsByFilter={rowsByFilter}
+      counts={entitiesService.countByKind()}
+      entities={entities}
+      properties={properties}
+      today={asOf}
+    />
+  );
 }

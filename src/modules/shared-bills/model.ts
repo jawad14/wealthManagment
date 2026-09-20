@@ -109,6 +109,12 @@ export interface SharedBill {
    */
   readonly recoveryReviewedOn: IsoDate | null;
   readonly recoveryDeadline: IsoDate | null;
+  /**
+   * When the recoverable shares were charged to the tenants' lease ledgers.
+   * Absent means not yet posted. Posting happens once — this is the guard
+   * against charging a tenant twice for the same bill.
+   */
+  readonly postedToLeasesOn?: IsoDate;
 }
 
 /** Why an allocation was rejected. Surfaced to the user rather than silently corrected. */

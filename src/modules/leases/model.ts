@@ -75,11 +75,25 @@ export interface Lease {
   readonly disputed: boolean;
 }
 
+/**
+ * What a charge is for.
+ * - `rent`    — generated from the lease dates. Absent means rent.
+ * - `utility` — a recovered share of a shared bill (FR-07). It is owed like rent
+ *               and counts towards arrears, but it is not rental income and is
+ *               never repriced or removed as "unearned rent".
+ */
+export type RentChargeKind = 'rent' | 'utility';
+
 export interface RentCharge {
   readonly id: RentChargeId;
   readonly leaseId: LeaseId;
   readonly dueOn: IsoDate;
   readonly amount: Money;
+  readonly kind?: RentChargeKind;
+  /** Shown on the tenant ledger for non-rent charges, e.g. "Water recovery · Urban Utilities". */
+  readonly description?: string;
+  /** The shared bill a utility charge came from, so a recovery can be traced back. */
+  readonly sourceBillId?: string;
 }
 
 /**

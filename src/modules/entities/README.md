@@ -25,5 +25,7 @@ Keeping them apart makes the ownership rules testable without any valuation data
 **Key files** — `model.ts`, `data/seed.ts`, `repository.ts`, `service.ts`,
 `validation.ts`, `api.ts`, `components/`.
 
-**Not yet implemented** — beneficiary percentage assignment, entity CRUD through
-the UI, multi-level look-through for company-owned companies.
+**Not yet implemented** — beneficiary percentage assignment, editing or ending
+an entity or relationship through the UI (adding both works), a refusal when a
+property's owners would exceed 100%, multi-level look-through for company-owned
+companies.

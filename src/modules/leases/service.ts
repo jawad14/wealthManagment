@@ -400,6 +400,8 @@ export const leasesService = {
 
     for (const charge of charges) {
       if (!isBefore(input.endsOn, charge.dueOn)) continue; // due on or before the end date: earned
+      // A utility recovery is for consumption already billed, not unearned rent.
+      if (charge.kind === 'utility') continue;
 
       const allocated = leasesRepository.listAllocations(charge.id);
       // A charge someone has already paid against is not unearned; leave it and
@@ -439,6 +441,7 @@ export const leasesService = {
     let repriced = 0;
     for (const charge of leasesRepository.listCharges(input.leaseId)) {
       if (isBefore(charge.dueOn, input.effectiveFrom)) continue;
+      if (charge.kind === 'utility') continue; // a recovery is not rent
       if (leasesRepository.listAllocations(charge.id).length > 0) continue;
 
       leasesRepository.updateCharge(charge.id, { amount: input.newRent });

@@ -308,7 +308,8 @@ export const dashboardService = {
     const income = sumMoney(
       leasesRepository
         .listAllCharges()
-        .filter((charge) => charge.dueOn >= periodFrom && charge.dueOn <= periodTo)
+        // A utility recovery passes a cost through to the tenant; it is not income.
+        .filter((charge) => charge.kind !== 'utility' && charge.dueOn >= periodFrom && charge.dueOn <= periodTo)
         .map((charge) => charge.amount),
     );
 

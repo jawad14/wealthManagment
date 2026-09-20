@@ -27,6 +27,8 @@ export const leasesRepository = {
     charges.where((charge) => charge.leaseId === leaseId),
   listAllCharges: (): readonly RentCharge[] => charges.list(),
   insertCharge: (charge: RentCharge): RentCharge => charges.insert(charge),
+  /** Add a one-off charge to a lease ledger, e.g. a utility recovery (FR-07). */
+  addCharge: (charge: RentCharge): RentCharge => charges.insert(charge),
   updateCharge: (id: RentChargeId, changes: Partial<Omit<RentCharge, 'id'>>): RentCharge | undefined =>
     charges.update(id, changes),
   removeCharge: (id: RentChargeId): boolean => charges.remove(id),

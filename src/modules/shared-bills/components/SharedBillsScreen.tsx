@@ -10,7 +10,7 @@ import { Kpi, KpiGrid } from '@/shared/components/Kpi';
 import { Grid, Stack, Stat, Sub, Toolbar } from '@/shared/components/Layout';
 import { FieldGrid, SelectField, TextField } from '@/shared/components/Field';
 import { ActionForm, firstError } from '@/shared/components/ActionForm';
-import { createSharedBillAction, recordRecoveryReviewAction } from '../actions';
+import { createSharedBillAction, postBillToLeasesAction, recordRecoveryReviewAction } from '../actions';
 import { formatMoney, type Money } from '@/shared/lib/money';
 import { formatDateShort } from '@/shared/lib/dates';
 import {
@@ -264,6 +264,9 @@ function BillDetail({
   readonly today: string;
 }) {
   const { bill, agreement, shares, rejection } = allocation;
+  const hasChargeableShares = shares.some(
+    (share) => share.recoverable && share.leaseId !== null && share.amount.cents > 0,
+  );
 
   return (
     <Card>
@@ -322,6 +325,27 @@ function BillDetail({
             </ul>
           </div>
         )}
+
+        {bill.postedToLeasesOn ? (
+          <div>
+            <Chip tone="good" icon="i-check">
+              Charged to lease · {formatDateShort(bill.postedToLeasesOn)}
+            </Chip>
+          </div>
+        ) : hasChargeableShares && bill.recoveryReviewedOn !== null ? (
+          <ActionForm
+            action={postBillToLeasesAction}
+            submitLabel="Post to tenant ledger"
+            submitVariant="primary"
+            hiddenFields={{ billId: bill.id }}
+            footnote={
+              <Sub style={{ fontSize: 12 }}>
+                Adds {formatMoney(allocation.recovered, { showCents: true })} of utility charges to the tenants&apos;
+                ledgers, due {formatDateShort(bill.dueOn)}. A bill can be posted once.
+              </Sub>
+            }
+          />
+        ) : null}
 
         {bill.recoveryReviewedOn === null ? (
           <ActionForm

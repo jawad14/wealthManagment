@@ -7,6 +7,7 @@ import { fromMajorUnits } from '@/shared/lib/money';
 import { runAction, type ActionResult } from '@/shared/lib/action-result';
 import { readAmount, readChoice, readString, requireString } from '@/shared/lib/form-data';
 import { ValidationError } from '@/shared/lib/errors';
+import { resolveAsOfDate } from '@/shared/config/app-config';
 import { accessService } from '@/modules/access/service';
 import { sharedBillsService } from './service';
 import { sharedBillsRepository } from './repository';
@@ -54,6 +55,30 @@ export async function recordRecoveryReviewAction(
     });
     revalidate();
     return updated;
+  });
+}
+
+/**
+ * Charge a bill's recoverable shares to the tenants' lease ledgers (FR-07).
+ *
+ * The service refuses a second posting, so a double-click or a stale tab cannot
+ * charge a tenant twice.
+ */
+export async function postBillToLeasesAction(
+  _previous: ActionResult<unknown>,
+  form: FormData,
+): Promise<ActionResult<unknown>> {
+  return runAction('Charged to tenant ledger', () => {
+    const billId = requireString(form, 'billId', 'Bill');
+    const result = sharedBillsService.postSharesToLeases(
+      billId,
+      accessService.getCurrentUser().id,
+      resolveAsOfDate(),
+    );
+
+    revalidate();
+    revalidatePath('/leases');
+    return result;
   });
 }
 

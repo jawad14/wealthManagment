@@ -6,13 +6,17 @@
  * acceptance criterion hold: a $200 bill split 60/40 produces exactly $120 and
  * $80, and an invalid allocation is rejected rather than silently adjusted.
  */
-import { NotFoundError, PolicyRequiredError, ValidationError } from '@/shared/lib/errors';
-import { allocateMoney, money, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
-import { isWithin } from '@/shared/lib/dates';
-import type { IsoDate, LeaseId, PropertyId } from '@/shared/types/common';
+import { randomUUID } from 'node:crypto';
+import { ConflictError, NotFoundError, PolicyRequiredError, ValidationError } from '@/shared/lib/errors';
+import { allocateMoney, formatMoney, money, subtractMoney, sumMoney, type Money } from '@/shared/lib/money';
+import { isWithin, toIsoDate } from '@/shared/lib/dates';
+import { asId, type IsoDate, type LeaseId, type PropertyId, type UserId } from '@/shared/types/common';
+import { accessService } from '@/modules/access/service';
 import { propertiesService } from '@/modules/properties/service';
+import { leasesRepository } from '@/modules/leases/repository';
 import { sharedBillsRepository } from './repository';
 import {
+  SHARED_BILL_CATEGORY_LABELS,
   type AllocationAgreement,
   type AllocationRejection,
   type BillAllocation,
@@ -208,6 +212,77 @@ export const sharedBillsService = {
         throw new ValidationError('Fixed shares must add up to the bill total.');
       }
     }
+  },
+
+  /** Shares of an allocation that can be charged to a tenant's lease. */
+  chargeableShares(allocation: BillAllocation): readonly (BillShare & { readonly leaseId: LeaseId })[] {
+    return allocation.shares.filter(
+      (share): share is BillShare & { readonly leaseId: LeaseId } =>
+        share.recoverable && share.leaseId !== null && share.amount.cents > 0,
+    );
+  },
+
+  /**
+   * Charge a bill's recoverable shares to the tenants' lease ledgers (FR-07).
+   *
+   * Each share becomes a `utility` charge on its lease, due when the bill is
+   * due, so it flows into arrears like any other amount owed. A bill posts once:
+   * `postedToLeasesOn` is the guard against charging a tenant twice. Amounts come
+   * from `allocate()`, never from storage, so the charges sum to the recovered
+   * figure exactly.
+   */
+  postSharesToLeases(
+    billId: string,
+    actor: UserId,
+    postedOn: IsoDate = toIsoDate(new Date()),
+  ): { chargesCreated: number } {
+    const allocation = sharedBillsService.allocate(billId);
+    const { bill } = allocation;
+
+    if (bill.postedToLeasesOn) {
+      throw new ConflictError(`This bill was already charged to the tenant ledger on ${bill.postedToLeasesOn}.`);
+    }
+    if (allocation.rejection !== null) {
+      throw new ValidationError('This bill has not been split, so there is nothing to charge to a tenant.');
+    }
+    // Recoverability is a reviewed input — a tenant is not charged on an assumption.
+    if (bill.recoveryReviewedOn === null) {
+      throw new ValidationError('Record the recovery review before charging this bill to tenants.');
+    }
+
+    const shares = sharedBillsService.chargeableShares(allocation);
+    if (shares.length === 0) {
+      throw new ValidationError('This bill has no recoverable tenant shares to charge.');
+    }
+
+    // Check every target before writing anything, so a bad share cannot leave
+    // the bill half-posted.
+    for (const share of shares) {
+      if (!leasesRepository.find(share.leaseId)) throw new NotFoundError('Lease', share.leaseId);
+    }
+
+    const description = `${SHARED_BILL_CATEGORY_LABELS[bill.category]} recovery · ${bill.supplier}`;
+    for (const share of shares) {
+      leasesRepository.addCharge({
+        id: asId<'RentCharge'>(`chg-${randomUUID()}`),
+        leaseId: share.leaseId,
+        dueOn: bill.dueOn,
+        amount: share.amount,
+        kind: 'utility',
+        description,
+        sourceBillId: bill.id,
+      });
+    }
+
+    sharedBillsRepository.update(bill.id, { postedToLeasesOn: postedOn });
+
+    accessService.record({
+      actor: accessService.resolveUserName(actor) ?? 'system',
+      summary: `Shared bill charged to leases · ${bill.supplier} ${bill.reference ?? ''}`.trim(),
+      context: `${shares.length} ${shares.length === 1 ? 'charge' : 'charges'} · ${formatMoney(allocation.recovered, { showCents: true })} · due ${bill.dueOn}`,
+    });
+
+    return { chargesCreated: shares.length };
   },
 
   /** Record the outcome of a recoverability review. Never inferred (FR-07). */

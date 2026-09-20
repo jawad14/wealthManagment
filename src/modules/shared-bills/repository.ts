@@ -31,4 +31,11 @@ export const sharedBillsRepository = {
   listShares: (billId: string): readonly BillShare[] => shares.where((share) => share.billId === billId),
   updateShare: (id: string, changes: Partial<Omit<BillShare, 'id'>>): BillShare | undefined =>
     shares.update(id, changes),
+
+  /** Restore every collection to its seeded state. Used by tests. */
+  reset: (): void => {
+    bills.reset();
+    agreements.reset();
+    shares.reset();
+  },
 };
